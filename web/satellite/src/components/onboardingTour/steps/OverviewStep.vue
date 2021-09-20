@@ -32,12 +32,12 @@
                 :is-disabled="isLoading"
             />
         </div>
-        <router-link
+        <div
             class="overview-area__skip-button"
-            :to="projectDashboardPath"
+            @click.prevent="onSkipClick"
         >
             Skip and go directly to dashboard
-        </router-link>
+        </div>
     </div>
 </template>
 
@@ -62,7 +62,6 @@ import { AnalyticsEvent } from '@/utils/constants/analyticsEventNames';
 })
 export default class OverviewStep extends Vue {
     public isLoading = false;
-    public projectDashboardPath = RouteConfig.ProjectDashboard.path;
 
     private readonly analytics: AnalyticsHttpApi = new AnalyticsHttpApi();
 
@@ -93,6 +92,14 @@ export default class OverviewStep extends Vue {
         await this.$router.push(RouteConfig.Objects.path).catch(() => {return; });
 
         this.isLoading = false;
+    }
+
+    /**
+     * Holds button click logic.
+     * Redirects to project dashboard.
+     */
+    public async onSkipClick(): Promise<void> {
+        await this.$router.push(RouteConfig.ProjectDashboard.path);
     }
 }
 </script>
@@ -142,7 +149,7 @@ export default class OverviewStep extends Vue {
         }
 
         &__skip-button {
-            margin-top: 50px;
+            margin: 50px 0 40px 0;
             color: #b7c1ca;
             cursor: pointer;
             text-decoration: underline !important;

@@ -2,145 +2,173 @@
 // See LICENSE for copying information.
 
 <template>
-    <div class="encrypt-container">
-        <EncryptIcon />
-        <h1 class="encrypt-container__title">Encrypt your data</h1>
-        <p class="encrypt-container__info">
-            The encryption passphrase is used to encrypt and access the data that you upload to Storj DCS. We strongly
-            encourage you to use a mnemonic phrase, which is automatically generated one on the client-side for you.
-            <span v-if="isOnboardingTour">
-                Alternatively, you can skip this step and enter a passphrase later into the Uplink CLI during setup.
-            </span>
-        </p>
-        <div class="encrypt-container__header">
-            <p class="encrypt-container__header__rec">RECOMMENDED</p>
-            <div class="encrypt-container__header__row">
-                <p class="encrypt-container__header__row__gen" :class="{ active: isGenerate }" @click="setToGenerate">Generate Phrase</p>
-                <div class="encrypt-container__header__row__right">
-                    <p class="encrypt-container__header__row__right__enter" :class="{ active: !isGenerate }" @click="setToEnter">Enter Your Own Passphrase</p>
-                    <VInfo
-                        class="encrypt-container__header__row__right__info-button"
-                        text="We strongly encourage you to use a mnemonic phrase, which is automatically generated one on the client-side for you. Alternatively, you can enter your own passphrase."
-                    >
-                        <InfoIcon class="encrypt-container__header__row__right__info-button__image" />
-                    </VInfo>
-                </div>
+    <div class="generate-container">
+        <h1 class="generate-container__title">Encryption Passphrase</h1>
+        <div class="generate-container__choosing">
+            <p class="generate-container__choosing__label">Passphrase</p>
+            <div class="generate-container__choosing__right">
+                <p
+                    class="generate-container__choosing__right__option left-option"
+                    :class="{ active: isGenerateState }"
+                    @click="onChooseGenerate"
+                >
+                    Generate Phrase
+                </p>
+                <p
+                    class="generate-container__choosing__right__option"
+                    :class="{ active: isEnterState }"
+                    @click="onChooseCreate"
+                >
+                    Enter Phrase
+                </p>
             </div>
         </div>
-        <div v-if="isGenerate" class="encrypt-container__generate">
-            <p class="encrypt-container__generate__value">{{ passphrase }}</p>
-            <VButton
-                class="encrypt-container__generate__button"
-                label="Copy"
-                width="66px"
-                height="30px"
-                is-blue-white="true"
-                :on-press="onCopyClick"
-            />
-        </div>
-        <div v-else class="encrypt-container__enter">
-            <HeaderlessInput
-                placeholder="Enter a passphrase here..."
-                width="100%"
-                :error="enterError"
-                @setData="setPassphrase"
-            />
-        </div>
-        <div class="encrypt-container__save">
-            <h2 class="encrypt-container__save__title">Save your encryption passphrase</h2>
-            <p class="encrypt-container__save__msg">
-                Please note that Storj does not know or store your encryption passphrase. If you lose it, you will
-                not be able to recover your files.
+        <div v-if="isEnterState" class="generate-container__enter-passphrase-box">
+            <div class="generate-container__enter-passphrase-box__header">
+                <GreenWarningIcon />
+                <h2 class="generate-container__enter-passphrase-box__header__label">Enter an Existing Passphrase</h2>
+            </div>
+            <p class="generate-container__enter-passphrase-box__message">
+                if you already have an encryption passphrase, enter your encryption passphrase here.
             </p>
-            <p class="encrypt-container__save__download" @click="onDownloadClick">Download as a text file</p>
         </div>
-        <div class="encrypt-container__buttons">
-            <VButton
-                v-if="isOnboardingTour"
-                class="encrypt-container__buttons__back"
-                label="< Back"
-                height="64px"
-                border-radius="62px"
-                :on-press="onBackClick"
-                is-grey-blue="true"
-                :is-disabled="isLoading"
-            />
-            <VButton
-                v-if="isOnboardingTour"
-                class="encrypt-container__buttons__skip"
-                label="Skip for now"
-                height="64px"
-                border-radius="62px"
-                :on-press="onSkipClick"
-                is-grey-blue="true"
-                :is-disabled="isLoading"
-            />
-            <VButton
-                label="Next >"
-                height="64px"
-                border-radius="62px"
-                :on-press="onNextButtonClick"
-                :is-disabled="isLoading"
-            />
+        <div class="generate-container__value-area">
+            <div v-if="isGenerateState" class="generate-container__value-area__mnemonic">
+                <p class="generate-container__value-area__mnemonic__value">{{ passphrase }}</p>
+                <VButton
+                    class="generate-container__value-area__mnemonic__button"
+                    label="Copy"
+                    width="66px"
+                    height="30px"
+                    :on-press="onCopyClick"
+                />
+            </div>
+            <div v-else class="generate-container__value-area__password">
+                <HeaderedInput
+                    class="generate-container__value-area__password__input"
+                    placeholder="Enter encryption passphrase here"
+                    :error="errorMessage"
+                    @setData="onChangePassphrase"
+                />
+            </div>
         </div>
+        <div v-if="isGenerateState" class="generate-container__warning">
+            <h2 class="generate-container__warning__title">Save Your Encryption Passphrase</h2>
+            <p class="generate-container__warning__message">
+                You’ll need this passphrase to access data in the future. This is the only time it will be displayed.
+                Be sure to write it down.
+            </p>
+            <label class="generate-container__warning__check-area" :class="{ error: isError }" for="pass-checkbox">
+                <input
+                    id="pass-checkbox"
+                    v-model="isChecked"
+                    class="generate-container__warning__check-area__checkbox"
+                    type="checkbox"
+                    @change="isError = false"
+                >
+                Yes, I wrote this down or saved it somewhere.
+            </label>
+        </div>
+        <VButton
+            class="generate-container__next-button"
+            label="Next"
+            width="100%"
+            height="48px"
+            :on-press="onProceed"
+            :is-disabled="isButtonDisabled"
+        />
     </div>
 </template>
 
 <script lang="ts">
+import * as bip39 from 'bip39';
 import { Component, Prop, Vue } from 'vue-property-decorator';
-import * as bip39 from "bip39";
 
-import { RouteConfig } from "@/router";
-import { LocalData, UserIDPassSalt } from "@/utils/localData";
-import { Download } from "@/utils/download";
-
+import HeaderedInput from '@/components/common/HeaderedInput.vue';
 import VButton from '@/components/common/VButton.vue';
-import VInfo from "@/components/common/VInfo.vue";
-import HeaderlessInput from "@/components/common/HeaderlessInput.vue";
 
-import EncryptIcon from "@/../static/images/objects/encrypt.svg";
-import InfoIcon from "@/../static/images/common/greyInfo.svg";
+import GreenWarningIcon from '@/../static/images/accessGrants/greenWarning.svg';
+
+import { AnalyticsHttpApi } from '@/api/analytics';
+import { AnalyticsEvent } from '@/utils/constants/analyticsEventNames';
 
 // @vue/component
 @Component({
     components: {
-        EncryptIcon,
-        InfoIcon,
-        VInfo,
+        GreenWarningIcon,
         VButton,
-        HeaderlessInput,
+        HeaderedInput,
     },
 })
 export default class GeneratePassphrase extends Vue {
     @Prop({ default: () => null })
-    public readonly onNextClick: () => unknown;
-    @Prop({ default: () => null })
-    public readonly onBackClick: () => unknown;
-    @Prop({ default: () => null })
-    public readonly onSkipClick: () => unknown;
+    public readonly onButtonClick: () => void;
     @Prop({ default: () => null })
     public readonly setParentPassphrase: (passphrase: string) => void;
     @Prop({ default: false })
     public readonly isLoading: boolean;
 
-    public isGenerate = true;
-    public enterError = '';
+    private readonly analytics: AnalyticsHttpApi = new AnalyticsHttpApi();
+
+    public isGenerateState = true;
+    public isEnterState = false;
+    public isChecked = false;
+    public isError = false;
     public passphrase = '';
+    public errorMessage = '';
 
     /**
      * Lifecycle hook after initial render.
-     * Chooses correct state and generates mnemonic.
+     * Generates mnemonic string.
      */
     public mounted(): void {
-        const idPassSalt: UserIDPassSalt | null = LocalData.getUserIDPassSalt();
-        if (idPassSalt && idPassSalt.userId === this.$store.getters.user.id) {
-            this.isGenerate = false;
+        this.passphrase = bip39.generateMnemonic();
+        this.setParentPassphrase(this.passphrase);
+    }
+
+    public onProceed(): void {
+        if (!this.passphrase) {
+            this.errorMessage = 'Passphrase can\'t be empty';
 
             return;
         }
 
+        if (!this.isChecked && this.isGenerateState) {
+            this.isError = true;
+
+            return;
+        }
+
+        this.analytics.eventTriggered(AnalyticsEvent.PASSPHRASE_CREATED);
+
+        this.onButtonClick();
+    }
+
+    /**
+     * Changes state to generate passphrase.
+     */
+    public onChooseGenerate(): void {
+        if (this.passphrase && this.isGenerateState) return;
+
         this.passphrase = bip39.generateMnemonic();
         this.setParentPassphrase(this.passphrase);
+
+        this.isEnterState = false;
+        this.isGenerateState = true;
+    }
+
+    /**
+     * Changes state to create passphrase.
+     */
+    public onChooseCreate(): void {
+        if (this.passphrase && this.isEnterState) return;
+
+        this.errorMessage = '';
+        this.passphrase = '';
+        this.setParentPassphrase(this.passphrase);
+
+        this.isEnterState = true;
+        this.isGenerateState = false;
     }
 
     /**
@@ -153,225 +181,219 @@ export default class GeneratePassphrase extends Vue {
     }
 
     /**
-     * Holds on download button click logic.
-     * Downloads encryption passphrase as a txt file.
+     * Changes passphrase data from input value.
+     * @param value
      */
-    public onDownloadClick(): void {
-        if (!this.passphrase) {
-            this.enterError = 'Can\'t be empty!';
-
-            return;
-        }
-
-        const fileName = 'StorjEncryptionPassphrase.txt';
-
-        Download.file(this.passphrase, fileName);
-    }
-
-    /**
-     * Sets passphrase from child component.
-     */
-    public setPassphrase(passphrase: string): void {
-        if (this.enterError) this.enterError = '';
-
-        this.passphrase = passphrase;
+    public onChangePassphrase(value: string): void {
+        this.passphrase = value.trim();
         this.setParentPassphrase(this.passphrase);
+        this.errorMessage = '';
     }
 
     /**
-     * Sets view state to enter passphrase.
+     * Indicates if button is disabled.
      */
-    public setToEnter(): void {
-        this.passphrase = '';
-        this.isGenerate = false;
-    }
-
-    /**
-     * Sets view state to generate passphrase.
-     */
-    public setToGenerate(): void {
-        if (this.enterError) this.enterError = '';
-
-        this.passphrase = bip39.generateMnemonic();
-        this.isGenerate = true;
-    }
-
-    /**
-     * Holds on next button click logic.
-     */
-    public async onNextButtonClick(): Promise<void> {
-        if (!this.passphrase) {
-            this.enterError = 'Can\'t be empty!';
-
-            return;
-        }
-
-        await this.onNextClick();
-    }
-
-    /**
-     * Indicates if current route is onboarding tour.
-     */
-    public get isOnboardingTour(): boolean {
-        return this.$route.path.includes(RouteConfig.OnboardingTour.path);
+    public get isButtonDisabled(): boolean {
+        return this.isLoading || !this.passphrase || (!this.isChecked && this.isGenerateState);
     }
 }
 </script>
 
 <style scoped lang="scss">
-    .encrypt-container {
+    .generate-container {
+        padding: 25px 50px;
+        max-width: 515px;
+        min-width: 515px;
         font-family: 'font_regular', sans-serif;
-        padding: 60px;
-        max-width: 500px;
-        background: #fcfcfc;
-        box-shadow: 0 0 32px rgba(0, 0, 0, 0.04);
-        border-radius: 20px;
-        margin: 30px auto 0 auto;
+        font-style: normal;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: #fff;
+        border-radius: 6px;
 
         &__title {
             font-family: 'font_bold', sans-serif;
-            font-size: 36px;
-            line-height: 56px;
-            letter-spacing: 1px;
-            color: #14142b;
-            margin: 35px 0 10px 0;
+            font-weight: bold;
+            font-size: 22px;
+            line-height: 27px;
+            color: #000;
+            margin: 0 0 30px 0;
         }
 
-        &__info {
-            font-size: 16px;
-            line-height: 32px;
-            letter-spacing: 0.75px;
-            color: #1b2533;
-            margin-bottom: 20px;
-        }
+        &__enter-passphrase-box {
+            padding: 20px;
+            background: #f9fffc;
+            border: 1px solid #1a9666;
+            border-radius: 9px;
 
-        &__header {
-
-            &__rec {
-                font-size: 12px;
-                line-height: 15px;
-                color: #1b2533;
-                opacity: 0.4;
-                margin-bottom: 15px;
-            }
-
-            &__row {
+            &__header {
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
+                margin-bottom: 10px;
 
-                &__gen {
+                &__label {
                     font-family: 'font_bold', sans-serif;
                     font-size: 16px;
                     line-height: 19px;
-                    color: #a9b5c1;
-                    padding-bottom: 10px;
-                    border-bottom: 5px solid #fff;
-                    cursor: pointer;
-                }
-
-                &__right {
-                    display: flex;
-                    align-items: flex-start;
-
-                    &__enter {
-                        font-family: 'font_bold', sans-serif;
-                        font-size: 16px;
-                        line-height: 19px;
-                        color: #a9b5c1;
-                        cursor: pointer;
-                        margin-right: 10px;
-                        padding-bottom: 10px;
-                        border-bottom: 5px solid #fff;
-                    }
-
-                    &__info-button {
-
-                        &__image {
-                            cursor: pointer;
-                        }
-                    }
+                    color: #1b2533;
+                    margin: 0 0 0 10px;
                 }
             }
-        }
 
-        &__generate {
-            margin-top: 25px;
-            display: flex;
-            align-items: center;
-            padding: 25px;
-            background: #eff0f7;
-            border-radius: 10px;
-
-            &__value {
+            &__message {
                 font-size: 16px;
-                line-height: 28px;
-                color: #384b65;
-            }
-
-            &__button {
-                margin-left: 32px;
-                min-width: 66px;
+                line-height: 19px;
+                color: #1b2533;
+                margin: 0;
             }
         }
 
-        &__enter {
-            margin-top: 25px;
-        }
-
-        &__save {
+        &__warning {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            width: calc(100% - 40px);
+            margin: 35px 0;
+            background: #fff;
             border: 1px solid #e6e9ef;
-            border-radius: 10px;
-            padding: 25px;
-            margin-top: 35px;
+            border-radius: 9px;
 
             &__title {
+                width: 100%;
+                text-align: center;
                 font-family: 'font_bold', sans-serif;
                 font-size: 16px;
                 line-height: 19px;
                 color: #1b2533;
-                margin-bottom: 10px;
+                margin: 0 0 0 15px;
             }
 
-            &__msg {
+            &__message {
+                font-size: 16px;
+                line-height: 19px;
+                color: #1b2533;
+                margin: 10px 0 0 0;
+                text-align: center;
+            }
+
+            &__check-area {
+                margin-top: 27px;
                 font-size: 14px;
-                line-height: 20px;
-                color: #1b2533;
-                margin-bottom: 10px;
-            }
-
-            &__download {
-                font-family: 'font_bold', sans-serif;
-                font-size: 16px;
                 line-height: 19px;
-                color: #0068dc;
-                cursor: pointer;
+                color: #1b2533;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+
+                &__checkbox {
+                    margin: 0 10px 0 0;
+                }
             }
         }
 
-        &__buttons {
-            width: 100%;
+        &__choosing {
             display: flex;
             align-items: center;
-            margin-top: 30px;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 25px;
 
-            &__back,
-            &__skip {
-                margin-right: 24px;
+            &__label {
+                font-family: 'font_bold', sans-serif;
+                font-size: 16px;
+                line-height: 21px;
+                color: #354049;
+                margin: 0;
+            }
+
+            &__right {
+                display: flex;
+                align-items: center;
+
+                &__option {
+                    font-size: 14px;
+                    line-height: 17px;
+                    color: #768394;
+                    margin: 0;
+                    cursor: pointer;
+                    border-bottom: 3px solid #fff;
+                }
             }
         }
+
+        &__value-area {
+            width: 100%;
+            display: flex;
+            align-items: flex-start;
+
+            &__mnemonic {
+                display: flex;
+                background: #f5f6fa;
+                border-radius: 9px;
+                padding: 10px;
+                width: calc(100% - 20px);
+
+                &__value {
+                    font-family: 'Source Code Pro', sans-serif;
+                    font-size: 14px;
+                    line-height: 25px;
+                    color: #384b65;
+                    word-break: break-word;
+                    margin: 0;
+                    word-spacing: 8px;
+                }
+
+                &__button {
+                    margin-left: 10px;
+                    min-width: 66px;
+                    min-height: 30px;
+                }
+            }
+
+            &__password {
+                width: 100%;
+                margin: 10px 0 20px 0;
+
+                &__input {
+                    width: calc(100% - 2px);
+                }
+            }
+        }
+    }
+
+    .left-option {
+        margin-right: 15px;
     }
 
     .active {
-        color: #0149ff;
-        border-color: #0149ff;
+        font-family: 'font_medium', sans-serif;
+        color: #0068dc;
+        border-bottom: 3px solid #0068dc;
     }
 
-    ::v-deep .info__box__message {
-        min-width: 440px;
+    .error {
+        color: red;
+    }
 
-        &__regular-text {
-            line-height: 32px;
+    ::v-deep .label-container {
+
+        &__main {
+            margin-bottom: 10px;
+
+            &__label {
+                margin: 0;
+                font-size: 14px;
+                line-height: 19px;
+                color: #7c8794;
+                font-family: 'font_bold', sans-serif;
+            }
+
+            &__error {
+                margin: 0 0 0 10px;
+                font-size: 14px;
+                line-height: 19px;
+            }
         }
     }
 </style>
