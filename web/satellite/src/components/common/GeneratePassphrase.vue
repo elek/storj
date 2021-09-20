@@ -46,6 +46,7 @@
         <div v-else class="encrypt-container__enter">
             <HeaderlessInput
                 placeholder="Enter a passphrase here..."
+                width="100%"
                 :error="enterError"
                 @setData="setPassphrase"
             />

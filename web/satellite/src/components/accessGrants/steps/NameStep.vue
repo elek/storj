@@ -6,6 +6,7 @@
         <h1 class="name-step__title">Name Your Access Grant</h1>
         <p class="name-step__sub-title">Enter a name for your new Access grant to get started.</p>
         <HeaderedInput
+            class="name-step__input"
             label="Access Grant Name"
             placeholder="Enter a name here..."
             :error="errorMessage"
@@ -166,6 +167,10 @@ export default class NameStep extends Vue {
             color: #000;
             text-align: center;
             margin: 0 0 80px 0;
+        }
+
+        &__input {
+            width: calc(100% - 2px);
         }
 
         &__buttons-area {

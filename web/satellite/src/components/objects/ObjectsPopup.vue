@@ -141,6 +141,7 @@ export default class ObjectsPopup extends Vue {
             }
 
             &__input {
+                width: calc(100% - 4px);
                 margin-bottom: 18px;
             }
 

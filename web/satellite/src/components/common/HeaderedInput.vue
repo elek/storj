@@ -90,7 +90,7 @@ export default class HeaderedInput extends HeaderlessInput {
         flex-direction: column;
         align-items: flex-start;
         margin-top: 10px;
-        width: 100%;
+        width: 48%;
         font-family: 'font_regular', sans-serif;
     }
 
@@ -159,12 +159,9 @@ export default class HeaderedInput extends HeaderlessInput {
         border-radius: 6px;
         outline: none;
         box-shadow: none;
-        -webkit-box-sizing: border-box;
-        -moz-box-sizing: border-box;
-        box-sizing: border-box;
 
         &::placeholder {
-            opacity: 0.6;
+            font-family: 'font_medium', sans-serif;
         }
     }
 

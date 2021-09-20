@@ -14,6 +14,7 @@
                 <HeaderlessInput
                     :label="inputLabel"
                     placeholder="Enter Coupon Code"
+                    class="add-coupon__input"
                     height="52px"
                     :with-icon="true"
                     @setData="setCouponCode"

@@ -20,9 +20,10 @@
                     <VInfo
                         class="share-object__msg__info-button"
                         title="Check out the documentation for more info"
+                        is-clickable="true"
                     >
                         <template #icon>
-                            <InfoIcon class="share-object__msg__info-button__icon" />
+                            <InfoIcon />
                         </template>
                         <template #message>
                             <p class="share-object__msg__info-button__message">
@@ -126,10 +127,6 @@ export default class ShareObject extends Vue {
             &__info-button {
                 max-width: 18px;
 
-                &__icon {
-                    cursor: pointer;
-                }
-
                 &__message {
                     color: #586c86;
                     font-size: 12px;
@@ -164,7 +161,7 @@ export default class ShareObject extends Vue {
     }
 
     ::v-deep .info__box {
-        top: 100%;
+        top: calc(100% - 24px);
 
         &__message {
             min-width: 360px;

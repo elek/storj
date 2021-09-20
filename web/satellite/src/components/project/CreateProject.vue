@@ -11,6 +11,7 @@
                 additional-label="Up To 20 Characters"
                 placeholder="Enter Project Name"
                 class="full-input"
+                width="100%"
                 is-limit-shown="true"
                 :current-limit="projectName.length"
                 :max-symbols="20"
@@ -23,7 +24,8 @@
                 additional-label="Optional"
                 class="full-input"
                 is-multiline="true"
-                height="100px"
+                height="60px"
+                width="calc(100% - 42px)"
                 is-limit-shown="true"
                 :current-limit="description.length"
                 :max-symbols="100"
@@ -162,6 +164,11 @@ export default class NewProjectPopup extends Vue {
 </script>
 
 <style scoped lang="scss">
+    .full-input {
+        width: 100%;
+        margin-top: 20px;
+    }
+
     .create-project-area {
         display: flex;
         align-items: center;
@@ -215,9 +222,5 @@ export default class NewProjectPopup extends Vue {
                 }
             }
         }
-    }
-
-    .full-input {
-        margin-top: 20px;
     }
 </style>

@@ -5,6 +5,7 @@
     <div class="info" @mouseenter="toggleVisibility" @mouseleave="toggleVisibility">
         <slot name="icon" />
         <div v-if="isVisible" class="info__box">
+            <div v-if="isClickable" class="info__box__click-mock" />
             <div class="info__box__arrow" />
             <div class="info__box__message">
                 <h1 v-if="title" class="info__box__message__title">{{ title }}</h1>
@@ -36,6 +37,8 @@ import VButton from '@/components/common/VButton.vue';
 export default class VInfo extends Vue {
     @Prop({default: ''})
     private readonly title: string;
+    @Prop({default: false})
+    private readonly isClickable: boolean;
     @Prop({default: ''})
     private readonly buttonLabel: string;
     @Prop({default: () => false})
@@ -76,7 +79,7 @@ export default class VInfo extends Vue {
             z-index: 1;
 
             &__click-mock {
-                height: 2px;
+                height: 24px;
                 background: transparent;
             }
 

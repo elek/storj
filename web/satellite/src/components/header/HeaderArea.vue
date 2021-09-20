@@ -29,10 +29,11 @@
                 class="header-container__right-area__info"
                 title="Need some help?"
                 button-label="START TOUR"
+                is-clickable="true"
                 :on-button-click="onStartTourButtonClick"
             >
                 <template #icon>
-                    <InfoIcon class="header-container__right-area__info__icon" />
+                    <InfoIcon />
                 </template>
                 <template #message>
                     <p class="header-container__right-area__info__message">
@@ -180,10 +181,6 @@ export default class HeaderArea extends Vue {
                 max-height: 24px;
                 margin-right: 17px;
 
-                &__icon {
-                    cursor: pointer;
-                }
-
                 &__message {
                     color: #586c86;
                     font-family: 'font_regular', sans-serif;
@@ -250,7 +247,7 @@ export default class HeaderArea extends Vue {
     }
 
     ::v-deep .info__box {
-        top: 100%;
+        top: calc(100% - 24px);
 
         &__message {
             min-width: 335px;
