@@ -28,18 +28,11 @@
                 v-if="!isOnboardingTour"
                 class="header-container__right-area__info"
                 title="Need some help?"
+                text="You can always start the onboarding tour and go through all the steps to get you started again."
                 button-label="START TOUR"
-                is-clickable="true"
                 :on-button-click="onStartTourButtonClick"
             >
-                <template #icon>
-                    <InfoIcon />
-                </template>
-                <template #message>
-                    <p class="header-container__right-area__info__message">
-                        You can always start the onboarding tour and go through all the steps to get you started again.
-                    </p>
-                </template>
+                <InfoIcon />
             </VInfo>
             <div class="header-container__right-area__satellite-area">
                 <div class="header-container__right-area__satellite-area__checkmark">
@@ -180,13 +173,6 @@ export default class HeaderArea extends Vue {
             &__info {
                 max-height: 24px;
                 margin-right: 17px;
-
-                &__message {
-                    color: #586c86;
-                    font-family: 'font_regular', sans-serif;
-                    font-size: 12px;
-                    line-height: 21px;
-                }
             }
 
             &__satellite-area {
@@ -251,6 +237,11 @@ export default class HeaderArea extends Vue {
 
         &__message {
             min-width: 335px;
+
+            &__regular-text {
+                font-size: 12px;
+                line-height: 21px;
+            }
         }
     }
 

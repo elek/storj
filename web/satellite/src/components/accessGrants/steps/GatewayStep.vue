@@ -25,15 +25,11 @@
             <div v-else class="gateway__container__keys-area">
                 <div class="gateway__container__keys-area__label-area">
                     <h3 class="gateway__container__keys-area__label-area__label">Access Key</h3>
-                    <VInfo class="gateway__container__keys-area__label-area__info-button">
-                        <template #icon>
-                            <InfoIcon />
-                        </template>
-                        <template #message>
-                            <p class="gateway__container__keys-area__label-area__info-button__message">
-                                The access key ID uniquely identifies your account.
-                            </p>
-                        </template>
+                    <VInfo
+                        class="gateway__container__keys-area__label-area__info-button"
+                        bold-text="The access key ID uniquely identifies your account."
+                    >
+                        <InfoIcon class="gateway__container__keys-area__label-area__info-button__image" />
                     </VInfo>
                 </div>
                 <div class="gateway__container__keys-area__key">
@@ -48,15 +44,11 @@
                 </div>
                 <div class="gateway__container__keys-area__label-area">
                     <h3 class="gateway__container__keys-area__label-area__label">Secret Key</h3>
-                    <VInfo class="gateway__container__keys-area__label-area__info-button">
-                        <template #icon>
-                            <InfoIcon />
-                        </template>
-                        <template #message>
-                            <p class="gateway__container__keys-area__label-area__info-button__message">
-                                Secret access keys are—as the name implies—secrets, like your password.
-                            </p>
-                        </template>
+                    <VInfo
+                        class="gateway__container__keys-area__label-area__info-button"
+                        bold-text="Secret access keys are—as the name implies—secrets, like your password."
+                    >
+                        <InfoIcon class="gateway__container__keys-area__label-area__info-button__image" />
                     </VInfo>
                 </div>
                 <div class="gateway__container__keys-area__key">
@@ -71,15 +63,11 @@
                 </div>
                 <div class="gateway__container__keys-area__label-area">
                     <h3 class="gateway__container__keys-area__label-area__label">End Point</h3>
-                    <VInfo class="gateway__container__keys-area__label-area__info-button">
-                        <template #icon>
-                            <InfoIcon />
-                        </template>
-                        <template #message>
-                            <p class="gateway__container__keys-area__label-area__info-button__message">
-                                The service to which you want to establish the connection.
-                            </p>
-                        </template>
+                    <VInfo
+                        class="gateway__container__keys-area__label-area__info-button"
+                        bold-text="The service to which you want to establish the connection."
+                    >
+                        <InfoIcon class="gateway__container__keys-area__label-area__info-button__image" />
                     </VInfo>
                 </div>
                 <div class="gateway__container__keys-area__key">
@@ -323,13 +311,6 @@ export default class GatewayStep extends Vue {
                             .ag-info-path {
                                 fill: #2683ff;
                             }
-                        }
-
-                        &__message {
-                            color: #586c86;
-                            font-family: 'font_medium', sans-serif;
-                            font-size: 16px;
-                            line-height: 18px;
                         }
                     }
                 }

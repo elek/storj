@@ -5,15 +5,11 @@
     <div class="team-header-container">
         <div class="team-header-container__title-area">
             <h1 class="team-header-container__title-area__title">Project Members</h1>
-            <VInfo class="team-header-container__title-area__info-button">
-                <template #icon>
-                    <InfoIcon />
-                </template>
-                <template #message>
-                    <p class="team-header-container__title-area__info-button__message">
-                        The only project role currently available is Admin, which gives full access to the project.
-                    </p>
-                </template>
+            <VInfo
+                class="team-header-container__title-area__info-button"
+                bold-text="The only project role currently available is Admin, which gives full access to the project."
+            >
+                <InfoIcon class="team-header-container__title-area__info-button__image" />
             </VInfo>
         </div>
         <div class="team-header-container__wrapper">
@@ -259,13 +255,6 @@ export default class HeaderArea extends Vue {
                     .team-header-svg-rect {
                         fill: #2683ff;
                     }
-                }
-
-                &__message {
-                    color: #586c86;
-                    font-family: 'font_regular', sans-serif;
-                    font-size: 16px;
-                    line-height: 18px;
                 }
             }
         }
