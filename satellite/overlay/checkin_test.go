@@ -33,11 +33,12 @@ func TestCheckIn(t *testing.T) {
 		require.Nil(t, oldInfo)
 
 		nodeInfo := overlay.NodeCheckInInfo{
-			NodeID:     nodeID,
-			Address:    &pb.NodeAddress{Address: "127.0.1.0"},
-			LastNet:    "127.0.1",
-			LastIPPort: "127.0.1.0:8080",
-			IsUp:       true,
+			NodeID:      nodeID,
+			Address:     &pb.NodeAddress{Address: "127.0.1.0"},
+			LastNet:     "127.0.1",
+			LastIPPort:  "127.0.1.0:8080",
+			CountryCode: "hu",
+			IsUp:        true,
 			Operator: &pb.NodeOperator{
 				Wallet:         "0x" + strings.Repeat("00", 20),
 				Email:          "abc123@mail.test",
@@ -63,6 +64,8 @@ func TestCheckIn(t *testing.T) {
 
 			require.Equal(t, expectedLastFailure.Truncate(time.Second).UTC(),
 				oldInfo.Reputation.LastContactFailure.Truncate(time.Second).UTC(), testName)
+
+			require.Equal(t, "hu", oldInfo.CountryCode)
 		}
 
 		infoCheck("First check-in", now, now, lastFail)
