@@ -65,6 +65,8 @@ type RawSegment struct {
 
 	InlineData []byte
 	Pieces     Pieces
+
+	Placement []byte
 }
 
 // RawState contains full state of a table.

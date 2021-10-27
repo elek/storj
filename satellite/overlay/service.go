@@ -135,6 +135,7 @@ type FindStorageNodesRequest struct {
 	ExcludedIDs        []storj.NodeID
 	MinimumVersion     string        // semver or empty
 	AsOfSystemInterval time.Duration // only used for CRDB queries
+	Placement          storj.PlacementConstraint
 }
 
 // NodeCriteria are the requirements for selecting nodes.
@@ -258,10 +259,11 @@ type NodeLastContact struct {
 
 // SelectedNode is used as a result for creating orders limits.
 type SelectedNode struct {
-	ID         storj.NodeID
-	Address    *pb.NodeAddress
-	LastNet    string
-	LastIPPort string
+	ID          storj.NodeID
+	Address     *pb.NodeAddress
+	LastNet     string
+	LastIPPort  string
+	CountryCode string
 }
 
 // Clone returns a deep clone of the selected node.
@@ -367,16 +369,7 @@ func (service *Service) FindStorageNodesForUpload(ctx context.Context, req FindS
 		return service.FindStorageNodesWithPreferences(ctx, req, &service.config.Node)
 	}
 
-	selectedNodes, err := service.UploadSelectionCache.GetNodes(ctx, req)
-	if err != nil {
-		service.log.Warn("error selecting from node selection cache", zap.String("err", err.Error()))
-	}
-
-	if len(selectedNodes) < req.RequestedCount {
-		mon.Event("default_node_selection")
-		return service.FindStorageNodesWithPreferences(ctx, req, &service.config.Node)
-	}
-	return selectedNodes, nil
+	return service.UploadSelectionCache.GetNodes(ctx, req)
 }
 
 // FindStorageNodesWithPreferences searches the overlay network for nodes that meet the provided criteria.

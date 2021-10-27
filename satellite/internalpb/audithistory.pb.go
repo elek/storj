@@ -9,6 +9,8 @@ import (
 	time "time"
 
 	proto "github.com/gogo/protobuf/proto"
+
+	_ "storj.io/common/pb"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

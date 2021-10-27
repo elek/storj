@@ -143,6 +143,8 @@ func (db *bucketsDB) UpdateBucket(ctx context.Context, bucket storj.Bucket) (_ s
 		updateFields.UserAgent = dbx.BucketMetainfo_UserAgent(bucket.UserAgent)
 	}
 
+	updateFields.Placement = dbx.BucketMetainfo_Placement(int(bucket.Placement))
+
 	dbxBucket, err := db.db.Update_BucketMetainfo_By_ProjectId_And_Name(ctx, dbx.BucketMetainfo_ProjectId(bucket.ProjectID[:]), dbx.BucketMetainfo_Name([]byte(bucket.Name)), updateFields)
 	if err != nil {
 		return storj.Bucket{}, storj.ErrBucket.Wrap(err)
@@ -283,6 +285,9 @@ func convertDBXtoBucket(dbxBucket *dbx.BucketMetainfo) (bucket storj.Bucket, err
 		},
 	}
 
+	if dbxBucket.Placement != nil {
+		bucket.Placement = storj.PlacementConstraint(*dbxBucket.Placement)
+	}
 	if dbxBucket.PartnerId != nil {
 		partnerID, err := uuid.FromBytes(dbxBucket.PartnerId)
 		if err != nil {
