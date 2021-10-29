@@ -10,15 +10,17 @@ import (
 // Node defines necessary information for node-selection.
 type Node struct {
 	storj.NodeURL
-	LastNet    string
-	LastIPPort string
+	LastNet     string
+	LastIPPort  string
+	CountryCode string
 }
 
 // Clone returns a deep clone of the selected node.
 func (node *Node) Clone() *Node {
 	return &Node{
-		NodeURL:    node.NodeURL,
-		LastNet:    node.LastNet,
-		LastIPPort: node.LastIPPort,
+		NodeURL:     node.NodeURL,
+		LastNet:     node.LastNet,
+		LastIPPort:  node.LastIPPort,
+		CountryCode: node.CountryCode,
 	}
 }

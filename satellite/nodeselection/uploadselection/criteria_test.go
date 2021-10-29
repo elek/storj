@@ -81,3 +81,71 @@ func TestCriteria_NodeIDAndSubnet(t *testing.T) {
 	}))
 
 }
+
+func TestCriteria_Geofencing(t *testing.T) {
+	excluded := testrand.NodeID()
+
+	eu := Criteria{
+		Placement: storj.EU,
+	}
+
+	us := Criteria{
+		Placement: storj.US,
+	}
+
+	cases := []struct {
+		name     string
+		country  string
+		criteria Criteria
+		expected bool
+	}{
+		{
+			name:     "US matches US selector",
+			country:  "US",
+			criteria: us,
+			expected: true,
+		},
+		{
+			name:     "Germany is EU",
+			country:  "DE",
+			criteria: eu,
+			expected: true,
+		},
+		{
+			name:     "US is not eu",
+			country:  "US",
+			criteria: eu,
+			expected: false,
+		},
+		{
+			name:     "Lower case country code is handled",
+			country:  "de",
+			criteria: eu,
+			expected: true,
+		},
+		{
+			name:     "Empty country doesn't match region",
+			country:  "",
+			criteria: eu,
+			expected: false,
+		},
+		{
+			name:     "Empty country doesn't match country",
+			country:  "",
+			criteria: us,
+			expected: false,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.expected, c.criteria.MatchInclude(&Node{
+				NodeURL: storj.NodeURL{
+					ID:      excluded,
+					Address: "192.168.0.1",
+				},
+				CountryCode: c.country,
+			}))
+		})
+	}
+}
