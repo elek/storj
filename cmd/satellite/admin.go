@@ -11,6 +11,7 @@ import (
 	"storj.io/private/process"
 	"storj.io/private/version"
 	"storj.io/storj/satellite"
+	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/satellitedb"
 )
 
@@ -37,7 +38,18 @@ func cmdAdminRun(cmd *cobra.Command, args []string) (err error) {
 		err = errs.Combine(err, db.Close())
 	}()
 
-	peer, err := satellite.NewAdmin(log, identity, db, version.Build, &runCfg.Config, process.AtomicLevel(cmd))
+	metabaseDB, err := metabase.Open(ctx, log.Named("metabase"), runCfg.Config.Metainfo.DatabaseURL, metabase.Config{
+		MinPartSize:      runCfg.Config.Metainfo.MinPartSize,
+		MaxNumberOfParts: runCfg.Config.Metainfo.MaxNumberOfParts,
+	})
+	if err != nil {
+		return errs.New("Error creating metabase connection on satellite api: %+v", err)
+	}
+	defer func() {
+		err = errs.Combine(err, metabaseDB.Close())
+	}()
+
+	peer, err := satellite.NewAdmin(log, identity, db, metabaseDB, version.Build, &runCfg.Config, process.AtomicLevel(cmd))
 	if err != nil {
 		return err
 	}

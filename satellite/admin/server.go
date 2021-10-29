@@ -19,6 +19,7 @@ import (
 	"storj.io/common/errs2"
 	"storj.io/storj/satellite/accounting"
 	"storj.io/storj/satellite/console"
+	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/metainfo"
 	"storj.io/storj/satellite/payments"
 	"storj.io/storj/satellite/payments/stripecoinpayments"
@@ -51,22 +52,24 @@ type Server struct {
 	server   http.Server
 	mux      *mux.Router
 
-	db       DB
-	payments payments.Accounts
+	db         DB
+	metabaseDB *metabase.DB
+	payments   payments.Accounts
 
 	nowFn func() time.Time
 }
 
 // NewServer returns a new administration Server.
-func NewServer(log *zap.Logger, listener net.Listener, db DB, accounts payments.Accounts, config Config) *Server {
+func NewServer(log *zap.Logger, listener net.Listener, db DB, metabaseDB *metabase.DB, accounts payments.Accounts, config Config) *Server {
 	server := &Server{
 		log: log,
 
 		listener: listener,
 		mux:      mux.NewRouter(),
 
-		db:       db,
-		payments: accounts,
+		db:         db,
+		metabaseDB: metabaseDB,
+		payments:   accounts,
 
 		nowFn: time.Now,
 	}
@@ -91,6 +94,9 @@ func NewServer(log *zap.Logger, listener net.Listener, db DB, accounts payments.
 	server.mux.HandleFunc("/api/projects/{project}/apikeys", server.listAPIKeys).Methods("GET")
 	server.mux.HandleFunc("/api/projects/{project}/apikeys", server.addAPIKey).Methods("POST")
 	server.mux.HandleFunc("/api/projects/{project}/apikeys/{name}", server.deleteAPIKeyByName).Methods("DELETE")
+	server.mux.HandleFunc("/api/projects/{project}/buckets/{bucket}/geofence", server.createGeofenceForBucket).Methods("POST")
+	server.mux.HandleFunc("/api/projects/{project}/buckets/{bucket}/geofence", server.deleteGeofenceForBucket).Methods("DELETE")
+	server.mux.HandleFunc("/api/projects/{project}/buckets/{bucket}/geofence", server.checkGeofenceForBucket).Methods("GET")
 	server.mux.HandleFunc("/api/apikeys/{apikey}", server.deleteAPIKey).Methods("DELETE")
 
 	return server
