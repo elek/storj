@@ -1,10 +1,6 @@
 // Copyright (C) 2021 Storj, Inc.
 // See LICENSE for copying information.
 
-package main
-
-import (
-	"context"
 	"crypto/tls"
 	"fmt"
 	"log"
