@@ -106,6 +106,7 @@ type AuthUser struct {
 	Password        string `json:"password"`
 	MFAPasscode     string `json:"mfaPasscode"`
 	MFARecoveryCode string `json:"mfaRecoveryCode"`
+	Signature       string `json:"signature"`
 }
 
 // UserStatus - is used to indicate status of the users account.
@@ -129,6 +130,7 @@ type User struct {
 
 	Email        string `json:"email"`
 	PasswordHash []byte `json:"passwordHash"`
+	PublicKey    []byte `json:"publicKey"`
 
 	Status    UserStatus `json:"status"`
 	PartnerID uuid.UUID  `json:"partnerId"`

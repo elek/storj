@@ -4,6 +4,7 @@
 package consoleapi
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -375,6 +376,35 @@ func (a *Auth) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = a.service.ChangePassword(ctx, passwordChange.CurrentPassword, passwordChange.NewPassword)
+	if err != nil {
+		a.serveJSONError(w, err)
+		return
+	}
+}
+
+// ChangeCryptoAddress auth user, changes the cyrpto address assigned to the user.
+func (a *Auth) ChangeCryptoAddress(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	var err error
+	defer mon.Task()(&ctx)(&err)
+
+	var changeCryptoAddress struct {
+		Signature string `json:"string"`
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&changeCryptoAddress)
+	if err != nil {
+		a.serveJSONError(w, err)
+		return
+	}
+
+	signature, err := hex.DecodeString(changeCryptoAddress.Signature)
+	if err != nil {
+		a.serveJSONError(w, err)
+		return
+	}
+
+	err = a.service.ChangeCryptoAddress(ctx, signature)
 	if err != nil {
 		a.serveJSONError(w, err)
 		return

@@ -7,8 +7,10 @@ import (
 	"context"
 	"crypto/subtle"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/crypto"
 	"net/mail"
 	"sort"
 	"time"
@@ -52,6 +54,7 @@ const (
 	emailUsedErrMsg                      = "This email is already in use, try another"
 	passwordRecoveryTokenIsExpiredErrMsg = "Your password recovery link has expired, please request another one"
 	credentialsErrMsg                    = "Your email or password was incorrect, please try again"
+	invalidSignatureMsg                  = "Invalid crypto signature"
 	passwordIncorrectErrMsg              = "Your password needs at least %d characters long"
 	projectOwnerDeletionForbiddenErrMsg  = "%s is a project owner and can not be deleted"
 	apiKeyWithNameExistsErrMsg           = "An API Key with this name already exists in this project, please use a different name"
@@ -829,9 +832,20 @@ func (s *Service) Token(ctx context.Context, request AuthUser) (token string, er
 		return "", ErrUnauthorized.New(credentialsErrMsg)
 	}
 
-	err = bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(request.Password))
-	if err != nil {
-		return "", ErrUnauthorized.New(credentialsErrMsg)
+	if request.Signature != "" {
+		signature, err := hex.DecodeString(request.Signature)
+		if err != nil {
+			return "", ErrUnauthorized.New(invalidSignatureMsg)
+		}
+		err = CheckSignature(user.Email, user.PublicKey, signature)
+		if err != nil {
+			return "", ErrUnauthorized.New(invalidSignatureMsg)
+		}
+	} else {
+		err = bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(request.Password))
+		if err != nil {
+			return "", ErrUnauthorized.New(credentialsErrMsg)
+		}
 	}
 
 	if user.MFAEnabled {
@@ -1001,6 +1015,29 @@ func (s *Service) ChangePassword(ctx context.Context, pass, newPass string) (err
 	}
 
 	auth.User.PasswordHash = hash
+	err = s.store.Users().Update(ctx, &auth.User)
+	if err != nil {
+		return Error.Wrap(err)
+	}
+
+	return nil
+}
+
+// ChangeCryptoAddress updates the signature for a user.
+func (s *Service) ChangeCryptoAddress(ctx context.Context, signature []byte) (err error) {
+	defer mon.Task()(&ctx)(&err)
+	auth, err := s.getAuthAndAuditLog(ctx, "change crypto address")
+	if err != nil {
+		return Error.Wrap(err)
+	}
+
+	pubKey, err := PublicKeyFromSignature(auth.User.Email, signature)
+	if err != nil {
+		return Error.Wrap(err)
+	}
+	compressedPubKey := crypto.CompressPubkey(pubKey)
+
+	auth.User.PublicKey = compressedPubKey
 	err = s.store.Users().Update(ctx, &auth.User)
 	if err != nil {
 		return Error.Wrap(err)

@@ -30,6 +30,15 @@ if(process.env["STORJ_DEBUG_BUNDLE_SIZE"]) {
 }
 
 module.exports = {
+    devServer: {
+        port: 1234,
+        proxy: {
+            "/api": {
+                target: "http://localhost:10000",
+                secure: false
+            }
+        }
+    },
     publicPath: "/static/dist",
     productionSourceMap: false,
     parallel: true,

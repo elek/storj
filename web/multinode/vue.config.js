@@ -4,6 +4,16 @@
 const path = require('path');
 
 module.exports = {
+    // vue.config.js
+
+    devServer: {
+        proxy: {
+            "/api": {
+                target: "https://localhost:7777",
+                secure: false
+            }
+        }
+    },
     publicPath: '/static/dist',
     productionSourceMap: false,
     parallel: true,

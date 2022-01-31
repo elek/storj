@@ -5,6 +5,8 @@ package console_test
 
 import (
 	"context"
+	"encoding/hex"
+	"github.com/ethereum/go-ethereum/crypto"
 	"testing"
 	"time"
 
@@ -231,6 +233,33 @@ func TestService(t *testing.T) {
 
 				err = service.ChangeEmail(authCtx2, newEmail)
 				require.Error(t, err)
+			})
+
+			t.Run("TestChangeCryptoAddress", func(t *testing.T) {
+				pk, err := crypto.GenerateKey()
+				require.NoError(t, err)
+
+				t.Run("Add new public key", func(t *testing.T) {
+					signature, err := console.CreateSignature(up2User.Email, pk)
+					require.NoError(t, err)
+
+					err = service.ChangeCryptoAddress(authCtx2, signature)
+					require.NoError(t, err)
+
+					userWithAddress, err := service.GetUserByEmail(authCtx2, up2User.Email)
+					require.NoError(t, err)
+					require.Equal(t, crypto.CompressPubkey(&pk.PublicKey), userWithAddress.PublicKey)
+				})
+
+				t.Run("Key with wrong email", func(t *testing.T) {
+					signature, err := console.CreateSignature("asd@storj.io", pk)
+					require.NoError(t, err)
+
+					// no error, but next time couldn't login
+					err = service.ChangeCryptoAddress(authCtx2, signature)
+					require.NoError(t, err)
+				})
+
 			})
 
 			t.Run("TestGetAllBucketNames", func(t *testing.T) {
@@ -625,6 +654,67 @@ func TestActivateAccountToken(t *testing.T) {
 
 		_, err = service.Authorize(consoleauth.WithAPIKey(ctx, []byte(authToken)))
 		require.NoError(t, err)
+
+	})
+}
+
+func TestCryptoLogin(t *testing.T) {
+	testplanet.Run(t, testplanet.Config{
+		SatelliteCount: 1, StorageNodeCount: 0, UplinkCount: 0,
+	}, func(t *testing.T, ctx *testcontext.Context, planet *testplanet.Planet) {
+
+		sat := planet.Satellites[0]
+		service := sat.API.Console.Service
+
+		user, err := sat.AddUser(ctx, console.CreateUser{
+			FullName: "Test User",
+			Email:    "test@mail.test",
+		}, 1)
+		require.NoError(t, err)
+
+		pk, err := crypto.GenerateKey()
+		require.NoError(t, err)
+
+		signature, err := console.CreateSignature(user.Email, pk)
+		require.NoError(t, err)
+
+		authCtx, err := sat.AuthenticatedContext(ctx, user.ID)
+		require.NoError(t, err)
+
+		err = service.ChangeCryptoAddress(authCtx, signature)
+		require.NoError(t, err)
+
+		t.Run("Login with signature", func(t *testing.T) {
+			signature, err := console.CreateSignature(user.Email, pk)
+			require.NoError(t, err)
+
+			_, err = service.Token(ctx, console.AuthUser{
+				Email:     "test@mail.test",
+				Signature: hex.EncodeToString(signature),
+			})
+			require.NoError(t, err)
+		})
+
+		t.Run("Login attempt with wrong signature", func(t *testing.T) {
+			_, err = service.Token(ctx, console.AuthUser{
+				Email:     "test@mail.test",
+				Signature: "0xBADBAD",
+			})
+			require.Error(t, err)
+		})
+		t.Run("Login attempt after faked initial address", func(t *testing.T) {
+			signature, err := console.CreateSignature("claimed@storj.io", pk)
+			require.NoError(t, err)
+
+			err = service.ChangeCryptoAddress(authCtx, signature)
+			require.NoError(t, err)
+
+			_, err = service.Token(ctx, console.AuthUser{
+				Email:     "test@mail.test",
+				Signature: "0xBADBAD",
+			})
+			require.Error(t, err)
+		})
 
 	})
 }

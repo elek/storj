@@ -69,6 +69,7 @@
                         </span>
                     </div>
                     <p class="login-area__content-area__container__button" :class="{ 'disabled-button': isLoading }" @click.prevent="onLogin">Sign In</p>
+                    <p class="login-area__content-area__container__button" :class="{ 'disabled-button': isLoading }" @click.prevent="onEthereumLogin">Login with Ethereum</p>
                     <span v-if="isMFARequired" class="login-area__content-area__container__cancel" :class="{ disabled: isLoading }" @click.prevent="onMFACancelClick">
                         Cancel
                     </span>
@@ -290,6 +291,7 @@ export default class Login extends Vue {
 
         await this.$router.push(RouteConfig.ProjectDashboard.path);
     }
+
 
     /**
      * Validates email and password input strings.

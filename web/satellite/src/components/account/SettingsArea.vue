@@ -79,11 +79,30 @@
                 </div>
             </div>
         </div>
-        <ChangePasswordPopup v-if="isChangePasswordPopupShown" />
-        <EditProfilePopup v-if="isEditProfilePopupShown" />
-        <EnableMFAPopup v-if="isEnableMFAPopup" :toggle-modal="toggleEnableMFAPopup" />
-        <DisableMFAPopup v-if="isDisableMFAPopup" :toggle-modal="toggleDisableMFAPopup" />
-        <MFARecoveryCodesPopup v-if="isMFACodesPopup" :toggle-modal="toggleMFACodesPopup" />
+      <div class="settings__mfa">
+        <h2 class="profile-bold-text">Ethereum login</h2>
+        <p v-if="!user.isMFAEnabled" class="profile-regular-text">
+          Prove your ethereum address ot use it for login.
+        </p>
+        <p v-else class="profile-regular-text">
+          2FA is enabled.
+        </p>
+        <div class="settings__mfa__buttons">
+          <VButton
+              label="Enable ethereum login"
+              width="273px"
+              height="44px"
+              :on-press="changeEthereumAddress"
+              :is-disabled="isLoading"
+          />
+
+        </div>
+      </div>
+      <ChangePasswordPopup v-if="isChangePasswordPopupShown"/>
+      <EditProfilePopup v-if="isEditProfilePopupShown"/>
+      <EnableMFAPopup v-if="isEnableMFAPopup" :toggle-modal="toggleEnableMFAPopup"/>
+      <DisableMFAPopup v-if="isDisableMFAPopup" :toggle-modal="toggleDisableMFAPopup"/>
+      <MFARecoveryCodesPopup v-if="isMFACodesPopup" :toggle-modal="toggleMFACodesPopup"/>
     </div>
 </template>
 
@@ -149,6 +168,24 @@ export default class SettingsArea extends Vue {
 
         this.isLoading = false;
     }
+
+  /**
+   * Generates user's MFA secret and opens popup.
+   */
+  public async changeEthereumAddress(): Promise<void> {
+    if (this.isLoading) return;
+
+    this.isLoading = true;
+
+    try {
+      await this.$store.dispatch(USER_ACTIONS.GENERATE_USER_MFA_SECRET);
+      this.toggleEnableMFAPopup();
+    } catch (error) {
+      await this.$notify.error(error.message);
+    }
+
+    this.isLoading = false;
+  }
 
     /**
      * Toggles generate new MFA recovery codes popup visibility.

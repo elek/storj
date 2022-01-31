@@ -377,6 +377,7 @@ CREATE TABLE users (
 	full_name text NOT NULL,
 	short_name text,
 	password_hash bytea NOT NULL,
+	public_key bytea,
 	status integer NOT NULL,
 	partner_id bytea,
 	user_agent bytea,

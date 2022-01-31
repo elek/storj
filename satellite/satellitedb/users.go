@@ -206,6 +206,7 @@ func toUpdateUser(user *console.User) (*dbx.User_Update_Fields, error) {
 		ProjectBandwidthLimit: dbx.User_ProjectBandwidthLimit(user.ProjectBandwidthLimit),
 		PaidTier:              dbx.User_PaidTier(user.PaidTier),
 		MfaEnabled:            dbx.User_MfaEnabled(user.MFAEnabled),
+		PublicKey:             dbx.User_PublicKey(user.PublicKey),
 	}
 
 	recoveryBytes, err := json.Marshal(user.MFARecoveryCodes)
@@ -257,6 +258,7 @@ func userFromDBX(ctx context.Context, user *dbx.User) (_ *console.User, err erro
 		IsProfessional:        user.IsProfessional,
 		HaveSalesContact:      user.HaveSalesContact,
 		MFAEnabled:            user.MfaEnabled,
+		PublicKey:             user.PublicKey,
 	}
 
 	if user.PartnerId != nil {

@@ -283,6 +283,7 @@ model user (
     field full_name          text      ( updatable )
     field short_name         text      ( updatable, nullable )
     field password_hash      blob      ( updatable )
+    field public_key         blob      ( updatable, nullable )
 
     field status                   int       ( updatable, autoinsert )
     field partner_id               blob      ( nullable )
