@@ -8,6 +8,8 @@ import { ErrorTooManyRequests } from '@/api/errors/ErrorTooManyRequests';
 import { ErrorUnauthorized } from '@/api/errors/ErrorUnauthorized';
 import { UpdatedUser, User, UsersApi } from '@/types/users';
 import { HttpClient } from '@/utils/httpClient';
+import {sign} from "crypto";
+import {ethers} from "ethers";
 
 /**
  * AuthHttpApi is a console Auth API.
@@ -42,11 +44,12 @@ export class AuthHttpApi implements UsersApi {
      * @param mfaRecoveryCode - MFA recovery code
      * @throws Error
      */
-    public async token(email: string, password: string, mfaPasscode: string, mfaRecoveryCode: string): Promise<string> {
+    public async token(email: string, password: string, mfaPasscode: string, mfaRecoveryCode: string, signature: string): Promise<string> {
         const path = `${this.ROOT_PATH}/token`;
         const body = {
             email,
             password,
+            signature,
             mfaPasscode: mfaPasscode ? mfaPasscode : null,
             mfaRecoveryCode: mfaRecoveryCode ? mfaRecoveryCode : null,
         };
@@ -155,6 +158,7 @@ export class AuthHttpApi implements UsersApi {
                 userResponse.employeeCount,
                 userResponse.haveSalesContact,
                 userResponse.mfaRecoveryCodeCount,
+                userResponse.wallet,
             );
         }
 
@@ -191,6 +195,35 @@ export class AuthHttpApi implements UsersApi {
             throw new Error('can not change password');
         }
         }
+    }
+
+
+    public async changeCryptoAddress(signature: string): Promise<void> {
+        const path = `${this.ROOT_PATH}/account/change-crypto-address`;
+        const body = {
+            signature: signature
+        };
+        const response = await this.http.post(path, JSON.stringify(body));
+        if (response.ok) {
+            return;
+        }
+
+        switch (response.status) {
+            case 401: {
+                throw new Error('old password is incorrect, please try again');
+            }
+            default: {
+                throw new Error('can not change password');
+            }
+        }
+    }
+
+    public async createSignature(email: string): Promise<string> {
+        const w: any = window
+        const provider = new ethers.providers.Web3Provider(w.ethereum)
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner()
+        return signer.signMessage("Here I prove that my Storj account uses email "+ email +" on Satellite X");
     }
 
     /**

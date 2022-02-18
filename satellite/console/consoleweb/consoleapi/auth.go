@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -294,6 +295,7 @@ func (a *Auth) GetAccount(w http.ResponseWriter, r *http.Request) {
 		PaidTier             bool      `json:"paidTier"`
 		MFAEnabled           bool      `json:"isMFAEnabled"`
 		MFARecoveryCodeCount int       `json:"mfaRecoveryCodeCount"`
+		Wallet               string    `json:"wallet"`
 	}
 
 	auth, err := console.GetAuth(ctx)
@@ -317,6 +319,7 @@ func (a *Auth) GetAccount(w http.ResponseWriter, r *http.Request) {
 	user.PaidTier = auth.User.PaidTier
 	user.MFAEnabled = auth.User.MFAEnabled
 	user.MFARecoveryCodeCount = len(auth.User.MFARecoveryCodes)
+	user.Wallet = hex.EncodeToString(auth.User.PublicKey)
 
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(&user)
@@ -389,7 +392,7 @@ func (a *Auth) ChangeCryptoAddress(w http.ResponseWriter, r *http.Request) {
 	defer mon.Task()(&ctx)(&err)
 
 	var changeCryptoAddress struct {
-		Signature string `json:"string"`
+		Signature string `json:"signature"`
 	}
 
 	err = json.NewDecoder(r.Body).Decode(&changeCryptoAddress)
@@ -398,6 +401,9 @@ func (a *Auth) ChangeCryptoAddress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if strings.HasPrefix(changeCryptoAddress.Signature, "0x") {
+		changeCryptoAddress.Signature = changeCryptoAddress.Signature[2:]
+	}
 	signature, err := hex.DecodeString(changeCryptoAddress.Signature)
 	if err != nil {
 		a.serveJSONError(w, err)

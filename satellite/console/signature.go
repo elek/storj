@@ -24,6 +24,7 @@ func CheckSignature(email string, publicKey []byte, signature []byte) (err error
 
 func PublicKeyFromSignature(email string, sig []byte) (*ecdsa.PublicKey, error) {
 	hash := hashMessage([]byte(fmt.Sprintf(MessageTemplate, email)))
+	sig[64] -= 27
 	return crypto.SigToPub(hash, sig)
 }
 
@@ -34,7 +35,7 @@ func CreateSignature(email string, privateKey *ecdsa.PrivateKey) (signature []by
 	if err != nil {
 		return nil, err
 	}
-	//signature[len(signature)-1] = signature[len(signature)-1] + 27
+	signature[len(signature)-1] = signature[len(signature)-1] + 27
 	return signature, nil
 
 }

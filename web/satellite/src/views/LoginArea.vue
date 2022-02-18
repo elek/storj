@@ -264,7 +264,7 @@ export default class Login extends Vue {
         }
 
         try {
-            await this.auth.token(this.email.trim(), this.password, this.passcode.trim(), this.recoveryCode.trim());
+            await this.auth.token(this.email.trim(), this.password, this.passcode.trim(), this.recoveryCode.trim(),"");
         } catch (error) {
             if (error instanceof ErrorMFARequired) {
                 if (this.isMFARequired) this.isMFAError = true;
@@ -292,6 +292,46 @@ export default class Login extends Vue {
         await this.$router.push(RouteConfig.ProjectDashboard.path);
     }
 
+  /**
+   * Performs login action.
+   * Then changes location to project dashboard page.
+   */
+  public async onEthereumLogin(): Promise<void> {
+    if (this.isLoading) {
+      return;
+    }
+
+    this.isLoading = true;
+    //TODO validate email
+    try {
+      const signature = await this.auth.createSignature(this.email.trim())
+      await this.auth.token(this.email.trim(), this.password, this.passcode.trim(), this.recoveryCode.trim(), signature);
+    } catch (error) {
+      if (error instanceof ErrorMFARequired) {
+        if (this.isMFARequired) this.isMFAError = true;
+
+        this.isMFARequired = true;
+        this.isLoading = false;
+
+        return;
+      }
+
+      if (this.isMFARequired) {
+        this.isMFAError = true;
+      } else {
+        await this.$notify.error(error.message);
+      }
+
+      this.isLoading = false;
+
+      return;
+    }
+
+    await this.$store.dispatch(APP_STATE_ACTIONS.CHANGE_STATE, AppState.LOADING);
+    this.isLoading = false;
+
+    await this.$router.push(RouteConfig.ProjectDashboard.path);
+  }
 
     /**
      * Validates email and password input strings.

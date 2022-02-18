@@ -81,28 +81,27 @@
         </div>
       <div class="settings__mfa">
         <h2 class="profile-bold-text">Ethereum login</h2>
-        <p v-if="!user.isMFAEnabled" class="profile-regular-text">
-          Prove your ethereum address ot use it for login.
+        <p v-if="!user.wallet" class="profile-regular-text">
+          Set your Ethereum address for passwordless login.
         </p>
-        <p v-else class="profile-regular-text">
-          2FA is enabled.
+        <p v-else>
+          Ethereum address: <a :href="'https://etherscan.io/address/0x'+user.wallet">0x{{user.wallet}}</a>
         </p>
         <div class="settings__mfa__buttons">
           <VButton
-              label="Enable ethereum login"
+              label="Set ethereum address"
               width="273px"
               height="44px"
-              :on-press="changeEthereumAddress"
+              :on-press="setEthereumAddress"
               :is-disabled="isLoading"
           />
-
         </div>
       </div>
-      <ChangePasswordPopup v-if="isChangePasswordPopupShown"/>
-      <EditProfilePopup v-if="isEditProfilePopupShown"/>
-      <EnableMFAPopup v-if="isEnableMFAPopup" :toggle-modal="toggleEnableMFAPopup"/>
-      <DisableMFAPopup v-if="isDisableMFAPopup" :toggle-modal="toggleDisableMFAPopup"/>
-      <MFARecoveryCodesPopup v-if="isMFACodesPopup" :toggle-modal="toggleMFACodesPopup"/>
+        <ChangePasswordPopup v-if="isChangePasswordPopupShown" />
+        <EditProfilePopup v-if="isEditProfilePopupShown" />
+        <EnableMFAPopup v-if="isEnableMFAPopup" :toggle-modal="toggleEnableMFAPopup" />
+        <DisableMFAPopup v-if="isDisableMFAPopup" :toggle-modal="toggleDisableMFAPopup" />
+        <MFARecoveryCodesPopup v-if="isMFACodesPopup" :toggle-modal="toggleMFACodesPopup" />
     </div>
 </template>
 
@@ -123,6 +122,8 @@ import EditIcon from '@/../static/images/common/edit.svg';
 import { USER_ACTIONS } from '@/store/modules/users';
 import { User } from '@/types/users';
 import { APP_STATE_ACTIONS } from '@/utils/constants/actionNames';
+import {AuthHttpApi} from "@/api/auth";
+import { ethers } from "ethers";
 
 // @vue/component
 @Component({
@@ -144,7 +145,9 @@ export default class SettingsArea extends Vue {
     public isDisableMFAPopup = false;
     public isMFACodesPopup = false;
 
-    /**
+    private readonly auth: AuthHttpApi = new AuthHttpApi();
+
+  /**
      * Lifecycle hook after initial render where user info is fetching.
      */
     public mounted(): void {
@@ -169,25 +172,26 @@ export default class SettingsArea extends Vue {
         this.isLoading = false;
     }
 
+
   /**
    * Generates user's MFA secret and opens popup.
    */
-  public async changeEthereumAddress(): Promise<void> {
+  public async setEthereumAddress(): Promise<void> {
     if (this.isLoading) return;
 
     this.isLoading = true;
-
     try {
-      await this.$store.dispatch(USER_ACTIONS.GENERATE_USER_MFA_SECRET);
-      this.toggleEnableMFAPopup();
+      const signature = await this.auth.createSignature(this.user.email)
+      console.log(signature)
+      await this.auth.changeCryptoAddress(signature)
+      await this.$store.dispatch(USER_ACTIONS.GET);
     } catch (error) {
       await this.$notify.error(error.message);
     }
-
     this.isLoading = false;
   }
 
-    /**
+  /**
      * Toggles generate new MFA recovery codes popup visibility.
      */
     public async generateNewMFARecoveryCodes(): Promise<void> {

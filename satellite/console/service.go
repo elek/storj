@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"net/mail"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/spacemonkeygo/monkit/v3"
@@ -833,6 +834,9 @@ func (s *Service) Token(ctx context.Context, request AuthUser) (token string, er
 	}
 
 	if request.Signature != "" {
+		if strings.HasPrefix(request.Signature, "0x") {
+			request.Signature = request.Signature[2:]
+		}
 		signature, err := hex.DecodeString(request.Signature)
 		if err != nil {
 			return "", ErrUnauthorized.New(invalidSignatureMsg)
@@ -1033,7 +1037,7 @@ func (s *Service) ChangeCryptoAddress(ctx context.Context, signature []byte) (er
 
 	pubKey, err := PublicKeyFromSignature(auth.User.Email, signature)
 	if err != nil {
-		return Error.Wrap(err)
+		return ErrUnauthorized.New("Public key couldn't be identified")
 	}
 	compressedPubKey := crypto.CompressPubkey(pubKey)
 
