@@ -123,6 +123,7 @@ type Service struct {
 	buckets           Buckets
 	partners          *rewards.PartnersService
 	accounts          payments.Accounts
+	depositWallets    payments.DepositWallets
 	captchaHandler    CaptchaHandler
 	analytics         *analytics.Service
 	tokens            *consoleauth.Service
@@ -175,7 +176,7 @@ type PaymentsService struct {
 }
 
 // NewService returns new instance of Service.
-func NewService(log *zap.Logger, store DB, restKeys RESTKeys, projectAccounting accounting.ProjectAccounting, projectUsage *accounting.Service, buckets Buckets, partners *rewards.PartnersService, accounts payments.Accounts, analytics *analytics.Service, tokens *consoleauth.Service, config Config) (*Service, error) {
+func NewService(log *zap.Logger, store DB, restKeys RESTKeys, projectAccounting accounting.ProjectAccounting, projectUsage *accounting.Service, buckets Buckets, partners *rewards.PartnersService, accounts payments.Accounts, depositWallets payments.DepositWallets, analytics *analytics.Service, tokens *consoleauth.Service, config Config) (*Service, error) {
 	if store == nil {
 		return nil, errs.New("store can't be nil")
 	}
@@ -203,6 +204,7 @@ func NewService(log *zap.Logger, store DB, restKeys RESTKeys, projectAccounting 
 		buckets:           buckets,
 		partners:          partners,
 		accounts:          accounts,
+		depositWallets:    depositWallets,
 		captchaHandler:    captchaHandler,
 		analytics:         analytics,
 		tokens:            tokens,
@@ -2495,13 +2497,41 @@ var ErrWalletNotClaimed = errs.Class("wallet is not claimed")
 
 // ClaimWallet requests a new wallet for the users to be used for payments. If wallet is already claimed,
 // it will return with the info without error.
-func (paymentService PaymentsService) ClaimWallet(ctx context.Context) (WalletInfo, error) {
-	panic("Not yet implemented")
+func (paymentService PaymentsService) ClaimWallet(ctx context.Context) (wallet WalletInfo, err error) {
+	defer mon.Task()(&ctx)(&err)
+
+	auth, err := paymentService.service.getAuthAndAuditLog(ctx, "claim wallet")
+	if err != nil {
+		return wallet, Error.Wrap(err)
+	}
+	address, err := paymentService.service.depositWallets.Claim(ctx, auth.User.ID)
+	if err != nil {
+		return wallet, Error.Wrap(err)
+	}
+	wallet = WalletInfo{
+		Address: address,
+		Balance: nil, //TODO: populate with call to billing table
+	}
+	return
 }
 
 // GetWallet returns with the assigned wallet, or with ErrWalletNotClaimed if not yet claimed.
-func (paymentService PaymentsService) GetWallet(ctx context.Context) (WalletInfo, error) {
-	panic("Not yet implemented")
+func (paymentService PaymentsService) GetWallet(ctx context.Context) (wallet WalletInfo, err error) {
+	defer mon.Task()(&ctx)(&err)
+
+	auth, err := GetAuth(ctx)
+	if err != nil {
+		return wallet, Error.Wrap(err)
+	}
+	address, err := paymentService.service.depositWallets.Get(ctx, auth.User.ID)
+	if err != nil {
+		return wallet, Error.Wrap(err)
+	}
+	wallet = WalletInfo{
+		Address: address,
+		Balance: nil, //TODO: populate with call to billing table
+	}
+	return
 }
 
 // Transactions returns with all the native blockchain transactions.

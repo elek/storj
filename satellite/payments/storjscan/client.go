@@ -95,15 +95,17 @@ func (client *Client) Payments(ctx context.Context, from int64) (_ LatestPayment
 		var data struct {
 			Error string `json:"error"`
 		}
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		if err = json.NewDecoder(resp.Body).Decode(&data); err != nil {
 			return LatestPayments{}, ClientErr.Wrap(err)
 		}
 
 		switch resp.StatusCode {
 		case http.StatusUnauthorized:
-			return LatestPayments{}, ClientErrUnauthorized.New("%s", data.Error)
+			err = ClientErrUnauthorized.New("%s", data.Error)
+			return
 		default:
-			return LatestPayments{}, ClientErr.New("%s", data.Error)
+			err = ClientErr.New("%s", data.Error)
+			return
 		}
 	}
 
@@ -113,4 +115,57 @@ func (client *Client) Payments(ctx context.Context, from int64) (_ LatestPayment
 	}
 
 	return payments, nil
+}
+
+// ClaimNewEthAddress claims a new ethereum wallet address for the given user.
+func (client *Client) ClaimNewEthAddress(ctx context.Context) (_ blockchain.Address, err error) {
+	defer mon.Task()(&ctx)(&err)
+
+	p := client.endpoint + "/api/v0/wallets/claim"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p, nil)
+	if err != nil {
+		return blockchain.Address{}, ClientErr.Wrap(err)
+	}
+
+	req.SetBasicAuth(client.identifier, client.secret)
+
+	resp, err := client.http.Do(req)
+	if err != nil {
+		return blockchain.Address{}, ClientErr.Wrap(err)
+	}
+	defer func() {
+		err = errs.Combine(err, ClientErr.Wrap(resp.Body.Close()))
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		var data struct {
+			Error string `json:"error"`
+		}
+		if err = json.NewDecoder(resp.Body).Decode(&data); err != nil {
+			return blockchain.Address{}, ClientErr.Wrap(err)
+		}
+
+		switch resp.StatusCode {
+		case http.StatusUnauthorized:
+			err = ClientErrUnauthorized.New("%s", data.Error)
+			return
+		default:
+			err = ClientErr.New("%s", data.Error)
+			return
+		}
+	}
+
+	var addressHex string
+
+	if err = json.NewDecoder(resp.Body).Decode(&addressHex); err != nil {
+		return blockchain.Address{}, ClientErr.Wrap(err)
+	}
+
+	var address blockchain.Address
+
+	if err = address.UnmarshalJSON([]byte(addressHex)); err != nil {
+		return blockchain.Address{}, ClientErr.Wrap(err)
+	}
+	return address, nil
 }
