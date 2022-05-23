@@ -29,7 +29,7 @@ var noServerSideCopyConfig = metabase.Config{
 func TestDeletePendingObject(t *testing.T) {
 	metabasetest.Run(t, func(ctx *testcontext.Context, t *testing.T, db *metabase.DB) {
 		obj := metabasetest.RandObjectStream()
-		now := time.Now()
+		now := time.Now().Round(0)
 		zombieDeadline := now.Add(24 * time.Hour)
 
 		for _, test := range metabasetest.InvalidObjectStreams(obj) {

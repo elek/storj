@@ -305,7 +305,7 @@ func TestListSegments(t *testing.T) {
 func TestListStreamPositions(t *testing.T) {
 	metabasetest.Run(t, func(ctx *testcontext.Context, t *testing.T, db *metabase.DB) {
 		obj := metabasetest.RandObjectStream()
-		now := time.Now()
+		now := time.Now().Round(0)
 
 		t.Run("StreamID missing", func(t *testing.T) {
 			defer metabasetest.DeleteAll{}.Check(ctx, t, db)

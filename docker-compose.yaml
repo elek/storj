@@ -1,0 +1,66 @@
+version: "3.4"
+services:
+  cockroach1:
+    command:
+      - start-single-node
+      - --insecure
+      - --store=type=mem,size=2GiB
+      - --http-addr=localhost:8086
+      - --cache=512MiB
+      - --max-sql-memory=512MiB
+    image: cockroachdb/cockroach
+    ports:
+      - 26257:26257
+  cockroach2:
+    command:
+      - start-single-node
+      - --insecure
+      - --store=type=mem,size=2GiB
+      - --http-addr=localhost:8086
+      - --cache=512MiB
+      - --max-sql-memory=512MiB
+    image: cockroachdb/cockroach
+    ports:
+      - 26258:26257
+  cockroach3:
+    command:
+      - start-single-node
+      - --insecure
+      - --store=type=mem,size=2GiB
+      - --http-addr=localhost:8086
+      - --cache=512MiB
+      - --max-sql-memory=512MiB
+    image: cockroachdb/cockroach
+    ports:
+      - 26259:26257
+  cockroach4:
+    command:
+      - start-single-node
+      - --insecure
+      - --store=type=mem,size=2GiB
+      - --http-addr=localhost:8086
+      - --cache=512MiB
+      - --max-sql-memory=512MiB
+    image: cockroachdb/cockroach
+    ports:
+      - 26260:26257
+  cockroach5:
+    command:
+      - start-single-node
+      - --insecure
+      - --store=type=mem,size=2GiB
+      - --http-addr=localhost:8086
+      - --cache=512MiB
+      - --max-sql-memory=512MiB
+    image: cockroachdb/cockroach
+    ports:
+      - 26256:26257
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_USER: storjtest
+      POSTGRES_DB: storjtest
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - 5432:5432

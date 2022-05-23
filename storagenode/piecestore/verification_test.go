@@ -99,17 +99,6 @@ func TestOrderLimitPutValidation(t *testing.T) {
 			limit:           memory.KiB.Int64(),
 			err:             "order expired:",
 		},
-		{
-			testName:        "allocated space limit",
-			pieceID:         storj.PieceID{8},
-			action:          pb.PieceAction_PUT,
-			serialNumber:    storj.SerialNumber{8},
-			pieceExpiration: oneWeek,
-			orderExpiration: oneWeek,
-			limit:           10 * memory.KiB.Int64(),
-			availableSpace:  5 * memory.KiB.Int64(),
-			err:             "not enough available disk space",
-		},
 	} {
 		tt := tt
 		t.Run(tt.testName, func(t *testing.T) {

@@ -5,14 +5,13 @@ package metabasetest
 
 import (
 	"bytes"
-	"sort"
-	"testing"
-	"time"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	"github.com/zeebo/errs"
+	"sort"
+	"testing"
+	"time"
 
 	"storj.io/common/testcontext"
 	"storj.io/storj/satellite/metabase"
