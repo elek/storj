@@ -149,7 +149,10 @@ func CreateMasterDB(ctx context.Context, log *zap.Logger, name string, category 
 		return nil, err
 	}
 	if *cockroachNoDrop && tempDB.Driver == "cockroach" {
-		tempDB.Cleanup = func(d tagsql.DB) error { return nil }
+		tempDB.Cleanup = func(d tagsql.DB) error {
+			log.Info("Test database is not dropped due to the STORJ_TEST_COCKROACH_NODROP. Please cleanup database manually.", zap.String("schema", schema))
+			return nil
+		}
 	}
 
 	return CreateMasterDBOnTopOf(ctx, log, tempDB)
