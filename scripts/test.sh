@@ -33,6 +33,7 @@ psql -h localhost -U storjtest -c 'create database teststorj;'
 psql -h localhost -U storjtest -c 'create database testmetabase;'
 psql -h localhost -U storjtest -c 'ALTER ROLE storjtest CONNECTION LIMIT -1;'
 
+set +e #following may fail, we should try to do all the final steps
 go test -tags noembed -parallel 4 -p 24 -vet=off $COVERFLAGS -timeout 32m -json -race $TEST_ARGS 2>&1 | tee .build/tests.json | xunit -out .build/tests.xml
 cat .build/tests.json | tparse -slow 20 -top
 docker-compose down -v
