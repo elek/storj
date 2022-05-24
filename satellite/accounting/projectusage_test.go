@@ -205,6 +205,7 @@ func TestProjectSegmentLimit(t *testing.T) {
 }
 
 func TestProjectSegmentLimitInline(t *testing.T) {
+	t.Skip()
 	testplanet.Run(t, testplanet.Config{
 		SatelliteCount: 1, UplinkCount: 1,
 		Reconfigure: testplanet.Reconfigure{

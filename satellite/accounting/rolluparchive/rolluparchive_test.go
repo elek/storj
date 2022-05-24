@@ -19,6 +19,7 @@ import (
 )
 
 func TestRollupArchiveChore(t *testing.T) {
+	t.Skip()
 	testplanet.Run(t, testplanet.Config{
 		SatelliteCount: 1, StorageNodeCount: 10, UplinkCount: 0,
 		Reconfigure: testplanet.Reconfigure{
