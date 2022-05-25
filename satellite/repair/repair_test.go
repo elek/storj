@@ -50,11 +50,9 @@ import (
 //	 threshold
 // - Downloads the data from those left nodes and check that it's the same than the uploaded one.
 func TestDataRepairInMemory(t *testing.T) {
-	t.Skip()
 	testDataRepair(t, true)
 }
 func TestDataRepairToDisk(t *testing.T) {
-	t.Skip()
 	testDataRepair(t, false)
 }
 
@@ -456,7 +454,6 @@ func TestMinRequiredDataRepair(t *testing.T) {
 // - Expects that the repair failed and the pointer was not updated.
 //   Reputation info to be updated for all remaining nodes.
 func TestFailedDataRepair(t *testing.T) {
-	t.Skip()
 	const RepairMaxExcessRateOptimalThreshold = 0.05
 
 	testplanet.Run(t, testplanet.Config{
@@ -577,7 +574,6 @@ func TestFailedDataRepair(t *testing.T) {
 // - Expects that the repair succeed and the pointer should contain the offline piece.
 //   Reputation info to be updated for all remaining nodes.
 func TestOfflineNodeDataRepair(t *testing.T) {
-	t.Skipped()
 	const RepairMaxExcessRateOptimalThreshold = 0.05
 
 	testplanet.Run(t, testplanet.Config{
