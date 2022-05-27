@@ -608,7 +608,7 @@ func TestIterateObjectsWithStatus(t *testing.T) {
 
 			queries := []metabase.ObjectKey{""}
 			for a := 0; a <= 0xFF; a++ {
-				if 4 < a && a < 251 {
+				if 3 < a && a < 252 {
 					continue
 				}
 				queries = append(queries, metabase.ObjectKey([]byte{byte(a)}))
@@ -622,9 +622,10 @@ func TestIterateObjectsWithStatus(t *testing.T) {
 
 			createObjectsWithKeys(ctx, t, db, projectID, bucketName, queries[1:])
 
+			var collector metabasetest.IterateCollector
 			for _, cursor := range queries {
 				for _, prefix := range queries {
-					var collector metabasetest.IterateCollector
+					collector = collector[:0]
 					err := db.IterateObjectsAllVersionsWithStatus(ctx, metabase.IterateObjectsWithStatus{
 						ProjectID:  projectID,
 						BucketName: bucketName,
@@ -635,10 +636,10 @@ func TestIterateObjectsWithStatus(t *testing.T) {
 						Prefix:                prefix,
 						Status:                metabase.Committed,
 						IncludeCustomMetadata: true,
-						IncludeSystemMetadata: true,
 					}, collector.Add)
 					require.NoError(t, err)
 
+					collector = collector[:0]
 					err = db.IterateObjectsAllVersionsWithStatus(ctx, metabase.IterateObjectsWithStatus{
 						ProjectID:  projectID,
 						BucketName: bucketName,
@@ -650,7 +651,6 @@ func TestIterateObjectsWithStatus(t *testing.T) {
 						Recursive:             true,
 						Status:                metabase.Committed,
 						IncludeCustomMetadata: true,
-						IncludeSystemMetadata: true,
 					}, collector.Add)
 					require.NoError(t, err)
 				}
