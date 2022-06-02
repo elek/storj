@@ -602,61 +602,6 @@ func TestIterateObjectsWithStatus(t *testing.T) {
 			}.Check(ctx, t, db)
 		})
 
-		t.Run("boundaries", func(t *testing.T) {
-			defer metabasetest.DeleteAll{}.Check(ctx, t, db)
-			projectID, bucketName := uuid.UUID{1}, "bucky"
-
-			queries := []metabase.ObjectKey{""}
-			for a := 0; a <= 0xFF; a++ {
-				if 3 < a && a < 252 {
-					continue
-				}
-				queries = append(queries, metabase.ObjectKey([]byte{byte(a)}))
-				for b := 0; b <= 0xFF; b++ {
-					if 4 < b && b < 251 {
-						continue
-					}
-					queries = append(queries, metabase.ObjectKey([]byte{byte(a), byte(b)}))
-				}
-			}
-
-			createObjectsWithKeys(ctx, t, db, projectID, bucketName, queries[1:])
-
-			var collector metabasetest.IterateCollector
-			for _, cursor := range queries {
-				for _, prefix := range queries {
-					collector = collector[:0]
-					err := db.IterateObjectsAllVersionsWithStatus(ctx, metabase.IterateObjectsWithStatus{
-						ProjectID:  projectID,
-						BucketName: bucketName,
-						Cursor: metabase.IterateCursor{
-							Key:     cursor,
-							Version: -1,
-						},
-						Prefix:                prefix,
-						Status:                metabase.Committed,
-						IncludeCustomMetadata: true,
-					}, collector.Add)
-					require.NoError(t, err)
-
-					collector = collector[:0]
-					err = db.IterateObjectsAllVersionsWithStatus(ctx, metabase.IterateObjectsWithStatus{
-						ProjectID:  projectID,
-						BucketName: bucketName,
-						Cursor: metabase.IterateCursor{
-							Key:     cursor,
-							Version: -1,
-						},
-						Prefix:                prefix,
-						Recursive:             true,
-						Status:                metabase.Committed,
-						IncludeCustomMetadata: true,
-					}, collector.Add)
-					require.NoError(t, err)
-				}
-			}
-		})
-
 		t.Run("verify-iterator-boundary", func(t *testing.T) {
 			defer metabasetest.DeleteAll{}.Check(ctx, t, db)
 			projectID, bucketName := uuid.UUID{1}, "bucky"
@@ -814,6 +759,63 @@ func TestIterateObjectsWithStatus(t *testing.T) {
 				require.NotNil(t, entry.EncryptedMetadataEncryptedKey)
 			}
 		})
+	})
+}
+
+func TestIteratorBoundaries(t *testing.T) {
+	metabasetest.Run(t, func(ctx *testcontext.Context, t *testing.T, db *metabase.DB) {
+		defer metabasetest.DeleteAll{}.Check(ctx, t, db)
+		projectID, bucketName := uuid.UUID{1}, "bucky"
+
+		queries := []metabase.ObjectKey{""}
+		for a := 0; a <= 0xFF; a++ {
+			if 3 < a && a < 252 {
+				continue
+			}
+			queries = append(queries, metabase.ObjectKey([]byte{byte(a)}))
+			for b := 0; b <= 0xFF; b++ {
+				if 4 < b && b < 251 {
+					continue
+				}
+				queries = append(queries, metabase.ObjectKey([]byte{byte(a), byte(b)}))
+			}
+		}
+
+		createObjectsWithKeys(ctx, t, db, projectID, bucketName, queries[1:])
+
+		var collector metabasetest.IterateCollector
+		for _, cursor := range queries {
+			for _, prefix := range queries {
+				collector = collector[:0]
+				err := db.IterateObjectsAllVersionsWithStatus(ctx, metabase.IterateObjectsWithStatus{
+					ProjectID:  projectID,
+					BucketName: bucketName,
+					Cursor: metabase.IterateCursor{
+						Key:     cursor,
+						Version: -1,
+					},
+					Prefix:                prefix,
+					Status:                metabase.Committed,
+					IncludeCustomMetadata: true,
+				}, collector.Add)
+				require.NoError(t, err)
+
+				collector = collector[:0]
+				err = db.IterateObjectsAllVersionsWithStatus(ctx, metabase.IterateObjectsWithStatus{
+					ProjectID:  projectID,
+					BucketName: bucketName,
+					Cursor: metabase.IterateCursor{
+						Key:     cursor,
+						Version: -1,
+					},
+					Prefix:                prefix,
+					Recursive:             true,
+					Status:                metabase.Committed,
+					IncludeCustomMetadata: true,
+				}, collector.Add)
+				require.NoError(t, err)
+			}
+		}
 	})
 }
 
