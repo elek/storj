@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 set -ex
+export PATH=$PATH:/usr/local/go/bin/
+cd "$(dirname ${BASH_SOURCE[0]})"/..
 TEST_ARGS=$@
 
 if [ ! $TEST_ARGS ]; then
