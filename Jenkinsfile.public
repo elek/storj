@@ -1,4 +1,5 @@
 pipeline {
+node('fast-lane') {
     agent {
         docker {
             label 'main'
@@ -408,4 +409,5 @@ pipeline {
             }
         }
     }
+}
 }
