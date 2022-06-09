@@ -1,8 +1,7 @@
 pipeline {
-node('fast-lane') {
     agent {
         docker {
-            label 'main'
+            label 'fast-lane'
             image 'storjlabs/ci:latest'
             alwaysPull true
             args '-u root:root --cap-add SYS_PTRACE -v "/tmp/gomod":/go/pkg/mod -v "/tmp/npm":/npm --tmpfs "/tmp:exec,mode=777"'
@@ -409,5 +408,4 @@ node('fast-lane') {
             }
         }
     }
-}
 }
