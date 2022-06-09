@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+cd "$(dirname ${BASH_SOURCE[0]})"/../..
 
 docker compose -f docker-compose.tests.yaml down -v --remove-orphans ## cleanup previous data
 docker compose -f docker-compose.tests.yaml up -d
