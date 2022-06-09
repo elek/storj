@@ -14,8 +14,8 @@ rm -rf .build || true
 mkdir .build
 go clean -testcache
 
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 sleep 10
 
 export STORJ_TEST_HOST='127.0.0.20;127.0.0.21;127.0.0.22;127.0.0.23;127.0.0.24;127.0.0.25'
@@ -38,4 +38,4 @@ psql -h localhost -U storjtest -c 'ALTER ROLE storjtest CONNECTION LIMIT -1;'
 set +e #following may fail, we should try to do all the final steps
 go test -tags noembed -vet=off $COVERFLAGS -p 16 -parallel 1 -timeout 32m -json -race $TEST_ARGS 2>&1 | tee .build/tests.json | xunit -out .build/tests.xml
 cat .build/tests.json | tparse -slow 20 -top
-docker-compose down -v
+docker compose down -v
