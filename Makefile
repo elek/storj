@@ -156,18 +156,7 @@ TEST_TARGET ?= "./..."
 
 .PHONY: test/setup
 test/setup:
-	@docker compose -f docker-compose.tests.yaml down -v --remove-orphans ## cleanup previous data
-	@docker compose -f docker-compose.tests.yaml up -d
-	@sleep 3
-	@docker compose -f docker-compose.tests.yaml exec crdb1 bash -c 'cockroach sql --insecure -e "create database testcockroach;"'
-	@docker compose -f docker-compose.tests.yaml exec crdb2 bash -c 'cockroach sql --insecure -e "create database testcockroach;"'
-	@docker compose -f docker-compose.tests.yaml exec crdb3 bash -c 'cockroach sql --insecure -e "create database testcockroach;"'
-	@docker compose -f docker-compose.tests.yaml exec crdb4 bash -c 'cockroach sql --insecure -e "create database testcockroach;"'
-	@docker compose -f docker-compose.tests.yaml exec crdb5 bash -c 'cockroach sql --insecure -e "create database testcockroach;"'
-	@docker compose -f docker-compose.tests.yaml exec crdb4 bash -c 'cockroach sql --insecure -e "create database testmetabase;"'
-	@docker compose -f docker-compose.tests.yaml exec postgres bash -c 'echo "postgres" | psql -U postgres -c "create database teststorj;"'
-	@docker compose -f docker-compose.tests.yaml exec postgres bash -c 'echo "postgres" | psql -U postgres -c "create database testmetabase;"'
-	@docker compose -f docker-compose.tests.yaml exec postgres bash -c 'echo "postgres" | psql -U postgres -c "ALTER ROLE postgres CONNECTION LIMIT -1;"'
+	./scripts/unit/setup.sh
 
 .PHONY: test/postgres
 test/postgres: test/setup ## Run tests against Postgres (developer)
@@ -200,20 +189,8 @@ test/cockroach: test/setup ## Run tests against CockroachDB (developer)
 
 .PHONY: test
 test: test/setup ## Run tests against CockroachDB and Postgres (developer)
-	@env \
-		STORJ_TEST_COCKROACH_NODROP='true' \
-		STORJ_TEST_POSTGRES='postgres://postgres:postgres@localhost:5532/teststorj?sslmode=disable' \
-		STORJ_TEST_COCKROACH="cockroach://root@localhost:26356/testcockroach?sslmode=disable" \
-		STORJ_TEST_COCKROACH="$$STORJ_TEST_COCKROACH;cockroach://root@localhost:26357/testcockroach?sslmode=disable" \
-		STORJ_TEST_COCKROACH="$$STORJ_TEST_COCKROACH;cockroach://root@localhost:26358/testcockroach?sslmode=disable" \
-		STORJ_TEST_COCKROACH="$$STORJ_TEST_COCKROACH;cockroach://root@localhost:26359/testcockroach?sslmode=disable" \
-		STORJ_TEST_COCKROACH_ALT='cockroach://root@localhost:26360/testcockroach?sslmode=disable' \
-		STORJ_TEST_LOG_LEVEL='info' \
-		go test -tags noembed -parallel 4 -p 6 -vet=off -race -v -cover -coverprofile=.coverprofile $(TEST_TARGET) || { \
-			docker compose -f docker-compose.tests.yaml rm -fs; \
-		}
-	@docker compose -f docker-compose.tests.yaml rm -fs
-	@echo done
+	./scripts/unit/run.sh || ./script/unit/teardown.sh
+	./scripts/unit/teardown.sh
 
 .PHONY: test-sim
 test-sim: ## Test source with storj-sim (jenkins)

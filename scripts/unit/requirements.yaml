@@ -1,0 +1,14 @@
+- command: xunit
+  version:
+    command: xunit --help
+    pattern: Usage
+  install:
+    global: go install github.com/ci/xunit@latest
+    local: GOTOOLDIR=.bin go install github.com/ci/xunit@latest
+- command: tparse
+  version:
+    command: tparse --version
+    pattern: v0.9.0
+  install:
+    global: go install github.com/mfridman/tparse@v0.9.0
+    local: GOTOOLDIR=.bin go install github.com/mfridman/tparse@v0.9.0
