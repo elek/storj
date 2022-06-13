@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
+set -euxo pipefail
 cd "$(dirname ${BASH_SOURCE[0]})"/../..
 
-set -ex
+: ${TEST_TARGET:=./...}
 
 export STORJ_TEST_COCKROACH_NODROP='true'
 export STORJ_TEST_POSTGRES='postgres://postgres:postgres@localhost:5532/teststorj?sslmode=disable'
