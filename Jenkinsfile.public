@@ -8,7 +8,6 @@ pipeline {
         }
     }
     options {
-        timeout(time: 40, unit: 'MINUTES')
         skipDefaultCheckout(true)
     }
     environment {
@@ -360,7 +359,7 @@ pipeline {
                         }
                     }
                 }
-            
+
 
 /*
         stage('UI') {
