@@ -125,8 +125,7 @@ pipeline {
             }
         }
 
-        stage('Verification') {
-            steps {
+
                 stage('Lint') {
                     steps {
                         sh 'check-mod-tidy'
@@ -361,8 +360,8 @@ pipeline {
                         }
                     }
                 }
-            }
-        }
+            
+
 /*
         stage('UI') {
             when {
