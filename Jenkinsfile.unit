@@ -86,7 +86,7 @@ pipeline {
                         // use go test to build all the packages, including tests
                         sh 'go test -v -p 16 -tags noembed -bench XYZXYZXYZXYZ -run XYZXYZXYZXYZ ./...'
                     }
-                }-
+                }
                 stage('go -race') {
                     steps {
                         // use go test to build all the packages, including tests
