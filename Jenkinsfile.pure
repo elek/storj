@@ -188,6 +188,7 @@ pipeline {
                         sh 'cockroach sql --insecure --host=localhost:26259 -e \'create database testcockroach;\''
                         sh 'cockroach sql --insecure --host=localhost:26260 -e \'create database testcockroach;\''
 
+                        sh 'psql -U postgres -c \'drop database if exists teststorj;\''
                         sh 'psql -U postgres -c \'create database teststorj;\''
 
                         sh 'use-ports -from 1024 -to 10000 &'
@@ -223,6 +224,7 @@ pipeline {
                         STORJ_TEST_POSTGRES = 'postgres://postgres@localhost/benchstorj?sslmode=disable'
                     }
                     steps {
+                        sh 'psql -U postgres -c \'drop database if exists benchstorj;\''
                         sh 'psql -U postgres -c \'create database benchstorj;\''
                         sh 'go test -tags noembed -parallel 1 -p 1 -vet=off -timeout 20m -short -run XYZXYZXYZXYZ -bench . -benchtime 1x ./...'
                     }
@@ -238,6 +240,7 @@ pipeline {
                     }
 
                     steps {
+                        sh 'psql -U postgres -c \'drop database if exists teststorj2;\''
                         sh 'psql -U postgres -c \'create database teststorj2;\''
                         sh 'make test-sim'
 
@@ -271,6 +274,7 @@ pipeline {
                     }
 
                     steps {
+                        sh 'psql -U postgres -c \'drop database if exists teststorj6;\''
                         sh 'psql -U postgres -c \'create database teststorj6;\''
                         sh 'make test-sim-redis-unavailability'
                     }
@@ -286,6 +290,7 @@ pipeline {
                     }
 
                     steps {
+                        sh 'psql -U postgres -c \'drop database if exists teststorj3;\''
                         sh 'psql -U postgres -c \'create database teststorj3;\''
                         sh 'make test-sim-backwards-compatible'
                     }
@@ -377,6 +382,7 @@ pipeline {
                 STORJ_TEST_EDGE_HOST = '127.0.0.10'
             }
             steps {
+                sh 'psql -U postgres -c \'drop database if exists testui;\''
                 sh 'psql -U postgres -c \'create database testui;\''
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                     sh 'cd testsuite && go test -parallel 1 -p 1 -short -vet=off -timeout 5m -json -race ./... 2>&1 | tee ../.build/ui-tests.json | xunit -out ../.build/ui-tests.xml'
