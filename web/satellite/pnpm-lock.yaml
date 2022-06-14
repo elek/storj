@@ -28,6 +28,7 @@ specifiers:
   apollo-link-context: 1.0.20
   apollo-link-error: 1.1.13
   apollo-link-http: 1.5.17
+  apollo-link-http-common: ^0.2.16
   aws-sdk: 2.1128.0
   babel-core: 7.0.0-bridge.0
   babel-jest: 27.5.1
@@ -60,6 +61,7 @@ specifiers:
   ts-jest: 27.1.4
   tslib: ^2.4.0
   typescript: 4.6.4
+  url: ^0.11.0
   util: 0.12.4
   vue: 2.6.14
   vue-chartjs: 3.5.1
@@ -85,6 +87,7 @@ dependencies:
   apollo-link-context: 1.0.20_graphql@15.3.0
   apollo-link-error: 1.1.13_graphql@15.3.0
   apollo-link-http: 1.5.17_graphql@15.3.0
+  apollo-link-http-common: 0.2.16_graphql@15.3.0
   aws-sdk: 2.1128.0
   bip39: 3.0.4
   chart.js: 2.9.4
@@ -98,6 +101,7 @@ dependencies:
   stream-browserify: 3.0.0
   stripe: 8.215.0
   tslib: 2.4.0
+  url: 0.11.0
   util: 0.12.4
   vue: 2.6.14
   vue-chartjs: 3.5.1_chart.js@2.9.4
@@ -10219,6 +10223,13 @@ packages:
 
   /url/0.10.3:
     resolution: {integrity: sha512-hzSUW2q06EqL1gKM/a+obYHLIO6ct2hwPuviqTTOcfFVc61UbfJ2Q32+uGL/HCPxKqrdGB5QUwIe7UqlDgwsOQ==}
+    dependencies:
+      punycode: 1.3.2
+      querystring: 0.2.0
+    dev: false
+
+  /url/0.11.0:
+    resolution: {integrity: sha512-kbailJa29QrtXnxgq+DdCEGlbTeYM2eJUxsz6vjZavrCYPMIFHMKQmSKYAIuUK2i7hgPm28a8piX5NTUtM/LKQ==}
     dependencies:
       punycode: 1.3.2
       querystring: 0.2.0
