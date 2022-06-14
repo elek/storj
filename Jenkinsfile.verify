@@ -43,7 +43,7 @@ pipeline {
                         dir('web/satellite') {
                             sh 'pnpm install'
                             sh './scripts/build-wasm.sh'
-                            sh 'pnpm run build'
+                            sh 'npm run build'
                         }
                     }
                 }
@@ -51,7 +51,7 @@ pipeline {
                     steps {
                         dir('web/storagenode') {
                             sh 'pnpm install'
-                            sh 'pnpm run build'
+                            sh 'npm run build'
                         }
                     }
                 }
@@ -59,7 +59,7 @@ pipeline {
                     steps {
                         dir('web/multinode') {
                             sh 'pnpm install'
-                            sh 'pnpm run build'
+                            sh 'npm run build'
                         }
                     }
                 }
@@ -67,7 +67,7 @@ pipeline {
                     steps {
                         dir('satellite/admin/ui') {
                             sh 'pnpm install'
-                            sh 'pnpm run build'
+                            sh 'npm run build'
                         }
                     }
                 }
@@ -145,8 +145,8 @@ pipeline {
                         }
 
                         dir("satellite/admin/ui") {
-                            sh 'pnpm run check'
-                            sh 'pnpm run lint'
+                            sh 'npm run check'
+                            sh 'npm run lint'
                         }
 
                         sh './scripts/check-package-lock.sh'
