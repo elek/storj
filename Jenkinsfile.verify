@@ -178,7 +178,8 @@ pipeline {
 
                         sh 'use-ports -from 1024 -to 10000 &'
 
-                        sh 'go test -tags noembed -parallel 4 -p 6 -vet=off $COVERFLAGS -timeout 32m -json -race ./... 2>&1 | tee .build/tests.json | xunit -out .build/tests.xml'
+                        sh 'go test -tags noembed -parallel 4 -p 6 -vet=off $COVERFLAGS -timeout 32m -json -race ./... 2>&1 | tee .build/tests.json | jq \'. | select(.Action != "output")\''
+                        sh 'cat .build/test.json | xunit -out .build/tests.xml'
                     }
 
                     post {
