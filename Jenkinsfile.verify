@@ -41,33 +41,33 @@ pipeline {
                 stage('web/satellite') {
                     steps {
                         dir('web/satellite') {
-                            sh 'npm ci --prefer-offline --no-audit'
+                            sh 'pnpm ci --prefer-offline --no-audit'
                             sh './scripts/build-wasm.sh'
-                            sh 'npm run build'
+                            sh 'pnpm run build'
                         }
                     }
                 }
                 stage('web/storagenode') {
                     steps {
                         dir('web/storagenode') {
-                            sh 'npm ci --prefer-offline --no-audit'
-                            sh 'npm run build'
+                            sh 'pnpm ci --prefer-offline --no-audit'
+                            sh 'pnpm run build'
                         }
                     }
                 }
                 stage('web/multinode') {
                     steps {
                         dir('web/multinode') {
-                            sh 'npm ci --prefer-offline --no-audit'
-                            sh 'npm run build'
+                            sh 'pnpm ci --prefer-offline --no-audit'
+                            sh 'pnpm run build'
                         }
                     }
                 }
                 stage('satellite/admin/ui') {
                     steps {
                         dir('satellite/admin/ui') {
-                            sh 'npm ci --prefer-offline --no-audit'
-                            sh 'npm run build'
+                            sh 'pnpm ci --prefer-offline --no-audit'
+                            sh 'pnpm run build'
                         }
                     }
                 }
@@ -145,8 +145,8 @@ pipeline {
                         }
 
                         dir("satellite/admin/ui") {
-                            sh 'npm run check'
-                            sh 'npm run lint'
+                            sh 'pnpm run check'
+                            sh 'pnpm run lint'
                         }
 
                         sh './scripts/check-package-lock.sh'
