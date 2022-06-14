@@ -7,7 +7,6 @@ pipeline {
         skipDefaultCheckout(true)
     }
     environment {
-        NPM_CONFIG_CACHE = '/npm/cache'
         GOTRACEBACK = 'all'
         COCKROACH_MEMPROF_INTERVAL=0
     }
