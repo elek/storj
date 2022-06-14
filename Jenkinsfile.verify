@@ -41,7 +41,7 @@ pipeline {
                 stage('web/satellite') {
                     steps {
                         dir('web/satellite') {
-                            sh 'pnpm ci --prefer-offline --no-audit'
+                            sh 'pnpm install'
                             sh './scripts/build-wasm.sh'
                             sh 'pnpm run build'
                         }
@@ -50,7 +50,7 @@ pipeline {
                 stage('web/storagenode') {
                     steps {
                         dir('web/storagenode') {
-                            sh 'pnpm ci --prefer-offline --no-audit'
+                            sh 'pnpm install'
                             sh 'pnpm run build'
                         }
                     }
@@ -58,7 +58,7 @@ pipeline {
                 stage('web/multinode') {
                     steps {
                         dir('web/multinode') {
-                            sh 'pnpm ci --prefer-offline --no-audit'
+                            sh 'pnpm install'
                             sh 'pnpm run build'
                         }
                     }
@@ -66,7 +66,7 @@ pipeline {
                 stage('satellite/admin/ui') {
                     steps {
                         dir('satellite/admin/ui') {
-                            sh 'pnpm ci --prefer-offline --no-audit'
+                            sh 'pnpm install'
                             sh 'pnpm run build'
                         }
                     }
