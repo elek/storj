@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"sort"
@@ -232,6 +233,22 @@ func (ec *ECRepairer) Get(ctx context.Context, limits []*pb.AddressedOrderLimit,
 
 	return decodeReader, pieces, nil
 }
+
+type lazyHashWriter struct {
+	hasher     hash.Hash
+	downloader *piecestore.Download
+}
+
+func (l lazyHashWriter) Write(p []byte) (n int, err error) {
+	// hash writer can decide hash algorithm only after the first read of downloader.
+	if l.hasher == nil {
+		h, _ := l.downloader.GetHashAndLimit()
+		l.hasher = pb.NewHashFromAlgorithm(h.HashAlgorithm)
+	}
+	return l.hasher.Write(p)
+}
+
+var _ io.Writer = &lazyHashWriter{}
 
 // downloadAndVerifyPiece downloads a piece from a storagenode,
 // expects the original order limit to have the correct piece public key,

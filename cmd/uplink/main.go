@@ -24,6 +24,7 @@ func main() {
 		Dynamic: ex.Dynamic,
 		Wrap:    ex.Wrap,
 	}.Run(context.Background(), func(cmds clingy.Commands) {
+
 		ex.Setup(cmds) // setup ex first so that stdlib flags can consult config
 		newStdlibFlags(flag.CommandLine).Setup(cmds)
 		commands(cmds, ex)

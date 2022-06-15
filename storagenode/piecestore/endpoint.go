@@ -226,6 +226,7 @@ func (endpoint *Endpoint) Upload(stream pb.DRPCPiecestore_UploadStream) (err err
 		return rpcstatus.Error(rpcstatus.InvalidArgument, "expected order limit as the first message")
 	}
 	limit := message.Limit
+	hashAlgorithm := message.HashAlgorithm
 
 	if limit.Action != pb.PieceAction_PUT && limit.Action != pb.PieceAction_PUT_REPAIR {
 		return rpcstatus.Errorf(rpcstatus.InvalidArgument, "expected put or put repair action got %v", limit.Action)
@@ -299,7 +300,7 @@ func (endpoint *Endpoint) Upload(stream pb.DRPCPiecestore_UploadStream) (err err
 		zap.Int64("Available Space", availableSpace))
 	mon.Counter("upload_started_count").Inc(1)
 
-	pieceWriter, err = endpoint.store.Writer(ctx, limit.SatelliteId, limit.PieceId)
+	pieceWriter, err = endpoint.store.Writer(ctx, limit.SatelliteId, limit.PieceId, hashAlgorithm)
 	if err != nil {
 		return rpcstatus.Wrap(rpcstatus.Internal, err)
 	}
@@ -386,6 +387,10 @@ func (endpoint *Endpoint) Upload(stream pb.DRPCPiecestore_UploadStream) (err err
 		}
 
 		if message.Done != nil {
+			if message.Done.HashAlgorithm != hashAlgorithm {
+				return rpcstatus.Wrap(rpcstatus.Internal, errs.New("Hash algorithm in the first and last upload message are different %s %s", hashAlgorithm, message.Done.HashAlgorithm))
+			}
+
 			calculatedHash := pieceWriter.Hash()
 			if err := endpoint.VerifyPieceHash(ctx, limit, message.Done, calculatedHash); err != nil {
 				return rpcstatus.Wrap(rpcstatus.Internal, err)
@@ -416,10 +421,11 @@ func (endpoint *Endpoint) Upload(stream pb.DRPCPiecestore_UploadStream) (err err
 			}
 
 			storageNodeHash, err := signing.SignPieceHash(ctx, endpoint.signer, &pb.PieceHash{
-				PieceId:   limit.PieceId,
-				Hash:      calculatedHash,
-				PieceSize: pieceWriter.Size(),
-				Timestamp: time.Now(),
+				PieceId:       limit.PieceId,
+				Hash:          calculatedHash,
+				HashAlgorithm: hashAlgorithm,
+				PieceSize:     pieceWriter.Size(),
+				Timestamp:     time.Now(),
 			})
 			if err != nil {
 				return rpcstatus.Wrap(rpcstatus.Internal, err)
