@@ -178,7 +178,7 @@ pipeline {
 
                         sh 'use-ports -from 1024 -to 10000 &'
 
-                        sh 'go test -tags noembed -parallel 4 -p 6 -vet=off $COVERFLAGS -timeout 32m -json -race ./... 2>&1 | tee .build/tests.json | jq \'. | select(.Action != "output")\''
+                        sh 'go test -tags noembed -parallel 4 -p 6 -vet=off $COVERFLAGS -timeout 32m -json -race ./... 2>&1 | tee .build/tests.json | jq \'select (.Action != "cont" and .Action != "pause" and .Action != "output")\''
                     }
 
                     post {
