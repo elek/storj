@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	jaeger "storj.io/monkit-jaeger"
 	"sync"
 	"syscall"
 
@@ -25,7 +26,6 @@ import (
 	"storj.io/drpc/drpcmigrate"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
-	jaeger "storj.io/monkit-jaeger"
 )
 
 // Config holds server specific configuration parameters.
@@ -286,6 +286,7 @@ func newPublic(publicAddr string, disableTCPTLS, disableQUIC bool) (public, erro
 
 	publicMux := drpcmux.New()
 	publicTracingHandler := rpctracing.NewHandler(publicMux, jaeger.RemoteTraceHandler)
+
 	serverOptions := drpcserver.Options{
 		Manager: rpc.NewDefaultManagerOptions(),
 	}
@@ -300,9 +301,10 @@ func newPublic(publicAddr string, disableTCPTLS, disableQUIC bool) (public, erro
 	}
 
 	return public{
-		tcpListener:   wrapListener(publicTCPListener),
-		udpConn:       publicUDPConn,
-		addr:          netAddr,
+		tcpListener: wrapListener(publicTCPListener),
+		udpConn:     publicUDPConn,
+		addr:        netAddr,
+		//drpc:          drpcserver.NewWithOptions(drpclog.NewWrappedHandler(publicTracingHandler), serverOptions),
 		drpc:          drpcserver.NewWithOptions(publicTracingHandler, serverOptions),
 		mux:           publicMux,
 		disableTCPTLS: disableTCPTLS,

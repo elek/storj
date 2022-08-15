@@ -4,9 +4,12 @@
 package main
 
 import (
+	"context"
+	"github.com/elek/storj-insight"
 	"github.com/spf13/cobra"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
+	"storj.io/storj/private/lifecycle"
 
 	"storj.io/common/context2"
 	"storj.io/private/process"
@@ -109,6 +112,21 @@ func cmdAPIRun(cmd *cobra.Command, args []string) (err error) {
 		log.Error("Failed satellite database version check.", zap.Error(err))
 		return errs.New("Error checking version for satellitedb: %+v", err)
 	}
+
+	ssh, err := insight.NewSSHServer(insight.WithConfig(runCfg), insight.WithStructBrowser(peer))
+
+	if err != nil {
+		return errs.Wrap(err)
+	}
+	peer.Servers.Add(lifecycle.Item{
+		Name: "ssh",
+		Run: func(ctx context.Context) error {
+			return ssh.Run()
+		},
+		Close: func() error {
+			return ssh.Stop()
+		},
+	})
 
 	runError := peer.Run(ctx)
 	closeError := peer.Close()

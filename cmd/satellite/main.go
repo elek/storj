@@ -469,6 +469,7 @@ func cmdRun(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	runError := peer.Run(ctx)
+
 	closeError := peer.Close()
 	return errs.Combine(runError, closeError)
 }
