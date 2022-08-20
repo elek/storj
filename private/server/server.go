@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"net/http"
 	"os"
 	"runtime"
 	"sync"
@@ -48,7 +49,10 @@ type public struct {
 	disableQUIC   bool
 
 	drpc *drpcserver.Server
-	mux  *drpcmux.Mux
+	// http fallback for the public endpoint
+	http http.HandlerFunc
+
+	mux *drpcmux.Mux
 }
 
 type private struct {
@@ -139,6 +143,11 @@ func (p *Server) Close() error {
 	return nil
 }
 
+// AddHTTPFallback adds http fallback to the drpc endpoint.
+func (p *Server) AddHTTPFallback(httpHandler http.HandlerFunc) {
+	p.public.http = httpHandler
+}
+
 // Run will run the server and all of its services.
 func (p *Server) Run(ctx context.Context) (err error) {
 	defer mon.Task()(&ctx)(&err)
@@ -225,6 +234,14 @@ func (p *Server) Run(ctx context.Context) (err error) {
 		group.Go(func() error {
 			defer cancel()
 			return p.public.drpc.Serve(ctx, wrapListener(p.public.quicListener))
+		})
+	}
+
+	if p.public.http != nil && publicMux != nil {
+		group.Go(func() error {
+			defer cancel()
+			// route connection with HTTP prefix + restore the removed prefix
+			return http.Serve(NewPrefixedListener([]byte("GET / HT"), publicMux.Route("GET / HT")), p.public.http)
 		})
 	}
 

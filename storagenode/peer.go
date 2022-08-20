@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"storj.io/storj/storagenode/healthcheck"
 	"time"
 
 	"github.com/spacemonkeygo/monkit/v3"
@@ -208,6 +209,11 @@ type Peer struct {
 		Service *checker.Service
 	}
 
+	Healthcheck struct {
+		Service  *healthcheck.Service
+		Endpoint *healthcheck.Endpoint
+	}
+
 	Debug struct {
 		Listener net.Listener
 		Server   *debug.Server
@@ -347,6 +353,12 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB, revocationDB exten
 		})
 	}
 
+	{
+
+		peer.Healthcheck.Service = healthcheck.NewService(peer.DB.Reputation())
+		peer.Healthcheck.Endpoint = healthcheck.NewEndpoint(peer.Healthcheck.Service)
+	}
+
 	{ // setup listener and server
 		sc := config.Server
 
@@ -361,6 +373,8 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB, revocationDB exten
 		if err != nil {
 			return nil, errs.Combine(err, peer.Close())
 		}
+
+		peer.Server.AddHTTPFallback(peer.Healthcheck.Endpoint.HandleHTTP)
 
 		peer.Servers.Add(lifecycle.Item{
 			Name: "server",
