@@ -44,6 +44,8 @@ type Dir struct {
 	mu          sync.Mutex
 	deleteQueue []string
 	trashnow    func() time.Time // the function used by trash to determine "now"
+
+	SkipSync bool
 }
 
 // OpenDir opens existing folder for storing blobs.
@@ -217,15 +219,17 @@ func (dir *Dir) blobToGarbagePath(ref storage.BlobRef) string {
 // Commit commits the temporary file to permanent storage.
 func (dir *Dir) Commit(ctx context.Context, file *os.File, ref storage.BlobRef, formatVersion storage.FormatVersion) (err error) {
 	defer mon.Task()(&ctx)(&err)
-	position, seekErr := file.Seek(0, io.SeekCurrent)
-	truncErr := file.Truncate(position)
-	syncErr := file.Sync()
-	chmodErr := os.Chmod(file.Name(), blobPermission)
-	closeErr := file.Close()
+	if !dir.SkipSync {
+		position, seekErr := file.Seek(0, io.SeekCurrent)
+		truncErr := file.Truncate(position)
+		syncErr := file.Sync()
+		chmodErr := os.Chmod(file.Name(), blobPermission)
+		closeErr := file.Close()
 
-	if seekErr != nil || truncErr != nil || syncErr != nil || chmodErr != nil || closeErr != nil {
-		removeErr := os.Remove(file.Name())
-		return errs.Combine(seekErr, truncErr, syncErr, chmodErr, closeErr, removeErr)
+		if seekErr != nil || truncErr != nil || syncErr != nil || chmodErr != nil || closeErr != nil {
+			removeErr := os.Remove(file.Name())
+			return errs.Combine(seekErr, truncErr, syncErr, chmodErr, closeErr, removeErr)
+		}
 	}
 
 	path, err := dir.blobToBasePath(ref)
