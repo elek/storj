@@ -41,23 +41,27 @@ func BenchmarkReadWrite(b *testing.B) {
 	source := testrand.Bytes(30 * memory.MB)
 
 	b.Run("Write", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			pieceID := testrand.PieceID()
-			writer, err := store.Writer(ctx, satelliteID, pieceID, pb.PieceHashAlgorithm_SHA256)
-			require.NoError(b, err)
+		for _, hashAlgo := range []pb.PieceHashAlgorithm{pb.PieceHashAlgorithm_SHA256, pb.PieceHashAlgorithm_BLAKE3} {
+			b.Run(hashAlgo.String(), func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					pieceID := testrand.PieceID()
+					writer, err := store.Writer(ctx, satelliteID, pieceID, hashAlgo)
+					require.NoError(b, err)
 
-			data := source
-			for len(data) > 0 {
-				n := blockSize
-				if n > len(data) {
-					n = len(data)
+					data := source
+					for len(data) > 0 {
+						n := blockSize
+						if n > len(data) {
+							n = len(data)
+						}
+						_, err = writer.Write(data[:n])
+						require.NoError(b, err)
+						data = data[n:]
+					}
+
+					require.NoError(b, writer.Commit(ctx, &pb.PieceHeader{}))
 				}
-				_, err = writer.Write(data[:n])
-				require.NoError(b, err)
-				data = data[n:]
-			}
-
-			require.NoError(b, writer.Commit(ctx, &pb.PieceHeader{}))
+			})
 		}
 	})
 
