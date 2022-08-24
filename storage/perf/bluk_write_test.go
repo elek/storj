@@ -1,6 +1,7 @@
 package perf
 
 import (
+	"context"
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -14,12 +15,13 @@ import (
 	"storj.io/storj/storage/sqlite"
 	"storj.io/storj/storagenode/pieces"
 	"testing"
+	"time"
 )
 
 type factory func(b *testing.B, name string, ctx *testcontext.Context, sync string) storage.Blobs
 
 func BenchmarkBulkWrite(b *testing.B) {
-	ctx := testcontext.New(b)
+	ctx := testcontext.NewWithContextAndTimeout(context.Background(), b, 1*time.Hour)
 	defer ctx.Cleanup()
 
 	// setup test parameters
