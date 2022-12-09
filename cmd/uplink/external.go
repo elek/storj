@@ -27,6 +27,7 @@ import (
 	"golang.org/x/term"
 
 	"storj.io/common/experiment"
+	"storj.io/common/rpc"
 	"storj.io/common/rpc/rpctracing"
 	jaeger "storj.io/monkit-jaeger"
 	"storj.io/private/version"
@@ -254,6 +255,20 @@ func (ex *external) Wrap(ctx context.Context, cmd clingy.Command) (err error) {
 	exp := os.Getenv("STORJ_EXPERIMENTAL")
 	if exp != "" {
 		ctx = experiment.With(ctx, exp)
+	}
+	quick := os.Getenv("STORJ_EXPERIMENTAL_QUIC_ROLLUP")
+	if quick != "" {
+		percent, err := strconv.Atoi(quick)
+		if err != nil {
+			return errs.Wrap(err)
+		}
+		ctx = rpc.WithQUICRolloutPercent(ctx, percent)
+	}
+
+	quickOnly := os.Getenv("STORJ_EXPERIMENTAL_QUIC_ONLY")
+	if quickOnly != "" {
+
+		ctx = rpc.WithForcedKind(ctx, "quic")
 	}
 
 	if ex.debug.pprofFile != "" {
