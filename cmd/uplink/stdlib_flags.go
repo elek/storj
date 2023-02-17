@@ -6,6 +6,8 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/zeebo/clingy"
@@ -41,6 +43,12 @@ func (s *stdlibFlags) Setup(f clingy.Flags) {
 // parseHumanDate parses command-line flags which accept relative and absolute datetimes.
 // It can be passed to clingy.Transform to create a clingy.Option.
 func parseHumanDate(date string) (time.Time, error) {
+	return parseHumanDateInLocation(date, time.Now().Location())
+}
+
+var durationWithDay = regexp.MustCompile(`(\+|-)(\d+)d`)
+
+func parseHumanDateInLocation(date string, loc *time.Location) (time.Time, error) {
 	switch {
 	case date == "none":
 		return time.Time{}, nil
@@ -49,17 +57,36 @@ func parseHumanDate(date string) (time.Time, error) {
 	case date == "now":
 		return time.Now(), nil
 	case date[0] == '+' || date[0] == '-':
+		dayDuration := durationWithDay.FindStringSubmatch(date)
+		if len(dayDuration) > 0 {
+			days, _ := strconv.Atoi(dayDuration[2])
+			if dayDuration[1] == "-" {
+				days *= -1
+			}
+			return time.Now().Add(time.Hour * time.Duration(days*24)), nil
+		}
+
 		d, err := time.ParseDuration(date)
 		return time.Now().Add(d), errs.Wrap(err)
 	default:
-		t, err := time.Parse(time.RFC3339, date)
-		if err != nil {
-			d, err := time.ParseDuration(date)
-			if err == nil {
-				return time.Now().Add(d), nil
-			}
+		t, err := time.ParseInLocation(time.RFC3339, date, time.Now().Location())
+		if err == nil {
+			return t, nil
 		}
-		return t, errs.Wrap(err)
+
+		// shorter version of RFC3339
+		for _, format := range []string{"2006-01-02T15:04:05", "2006-01-02T15:04", "2006-01-02"} {
+			t, err := time.ParseInLocation(format, date, loc)
+			if err == nil {
+				return t, nil
+			}
+			time.Now().Location()
+		}
+		d, err := time.ParseDuration(date)
+		if err == nil {
+			return time.Now().Add(d), nil
+		}
+		return time.Time{}, err
 	}
 }
 
