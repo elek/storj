@@ -43,10 +43,23 @@ const (
 type blobReader struct {
 	*os.File
 	formatVersion storage.FormatVersion
+	ctx           context.Context
 }
 
-func newBlobReader(file *os.File, formatVersion storage.FormatVersion) *blobReader {
-	return &blobReader{file, formatVersion}
+func newBlobReader(ctx context.Context, file *os.File, formatVersion storage.FormatVersion) *blobReader {
+	return &blobReader{file, formatVersion, ctx}
+}
+
+func (blob *blobReader) Read(p []byte) (n int, err error) {
+	ctx := blob.ctx
+	mon.Task()(&ctx)(&err)
+	return blob.File.Read(p)
+}
+
+func (blob *blobReader) ReadAt(p []byte, off int64) (n int, err error) {
+	ctx := blob.ctx
+	mon.Task()(&ctx)(&err)
+	return blob.File.ReadAt(p, off)
 }
 
 // Size returns how large is the blob.

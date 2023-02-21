@@ -662,6 +662,7 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 		}
 
 		err = rpctimeout.Run(ctx, endpoint.config.StreamOperationTimeout, func(_ context.Context) (err error) {
+			mon.Task(monkit.NewSeriesTag("piece", "send"))(&ctx)(&err)
 			return stream.Send(&pb.PieceDownloadResponse{Hash: &pieceHash, Limit: &orderLimit})
 		})
 		if err != nil {
@@ -711,6 +712,7 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 			}
 
 			err = rpctimeout.Run(ctx, endpoint.config.StreamOperationTimeout, func(_ context.Context) (err error) {
+				mon.Task(monkit.NewSeriesTag("piece", "send"))(&ctx)(&err)
 				return stream.Send(&pb.PieceDownloadResponse{
 					Chunk: &pb.PieceDownloadResponse_Chunk{
 						Offset: currentOffset,
@@ -767,6 +769,7 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 			// N.B.: we are only allowed to use message if the returned error is nil. it would be
 			// a race condition otherwise as Run does not wait for the closure to exit.
 			err = rpctimeout.Run(ctx, endpoint.config.StreamOperationTimeout, func(_ context.Context) (err error) {
+				mon.Task(monkit.NewSeriesTag("piece", "recv"))(&ctx)(&err)
 				message, err = stream.Recv()
 				return err
 			})

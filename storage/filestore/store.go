@@ -52,6 +52,7 @@ type blobStore struct {
 	log    *zap.Logger
 	dir    *Dir
 	config Config
+	m      func(*error)
 }
 
 // New creates a new disk blob store in the specified directory.
@@ -69,11 +70,14 @@ func NewAt(log *zap.Logger, path string, config Config) (storage.Blobs, error) {
 }
 
 // Close closes the store.
-func (store *blobStore) Close() error { return nil }
+func (store *blobStore) Close() error {
+	store.m(nil)
+	return nil
+}
 
 // Open loads blob with the specified hash.
 func (store *blobStore) Open(ctx context.Context, ref storage.BlobRef) (_ storage.BlobReader, err error) {
-	defer mon.Task()(&ctx)(&err)
+	store.m = mon.Task()(&ctx)
 	file, formatVer, err := store.dir.Open(ctx, ref)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -81,7 +85,7 @@ func (store *blobStore) Open(ctx context.Context, ref storage.BlobRef) (_ storag
 		}
 		return nil, Error.Wrap(err)
 	}
-	return newBlobReader(file, formatVer), nil
+	return newBlobReader(ctx, file, formatVer), nil
 }
 
 // OpenWithStorageFormat loads the already-located blob, avoiding the potential need to check multiple
@@ -95,7 +99,7 @@ func (store *blobStore) OpenWithStorageFormat(ctx context.Context, blobRef stora
 		}
 		return nil, Error.Wrap(err)
 	}
-	return newBlobReader(file, formatVer), nil
+	return newBlobReader(ctx, file, formatVer), nil
 }
 
 // Stat looks up disk metadata on the blob file.
