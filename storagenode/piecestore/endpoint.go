@@ -688,45 +688,10 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 		currentOffset := chunk.Offset
 		unsentAmount := chunk.ChunkSize
 		for unsentAmount > 0 {
-			tryToSend := min(unsentAmount, maximumChunkSize)
 
-			// TODO: add timeout here
-			chunkSize, err := throttle.ConsumeOrWait(tryToSend)
-			if err != nil {
-				// this can happen only because uplink decided to close the connection
-				return nil //nolint: nilerr // We don't need to return an error when client cancels.
-			}
-
-			chunkData := make([]byte, chunkSize)
-			_, err = pieceReader.Seek(currentOffset, io.SeekStart)
-			if err != nil {
-				endpoint.log.Error("error seeking on piecereader", zap.Error(err))
-				return rpcstatus.Wrap(rpcstatus.Internal, err)
-			}
-
-			// ReadFull is required to ensure we are sending the right amount of data.
-			_, err = io.ReadFull(pieceReader, chunkData)
-			if err != nil {
-				endpoint.log.Error("error reading from piecereader", zap.Error(err))
-				return rpcstatus.Wrap(rpcstatus.Internal, err)
-			}
-
-			err = rpctimeout.Run(ctx, endpoint.config.StreamOperationTimeout, func(_ context.Context) (err error) {
-				mon.Task(monkit.NewSeriesTag("piece", "send"))(&ctx)(&err)
-				return stream.Send(&pb.PieceDownloadResponse{
-					Chunk: &pb.PieceDownloadResponse_Chunk{
-						Offset: currentOffset,
-						Data:   chunkData,
-					},
-				})
-			})
-			if errs.Is(err, io.EOF) {
-				// err is io.EOF when uplink asked for a piece, but decided not to retrieve it,
-				// no need to propagate it
-				return nil
-			}
-			if err != nil {
-				return rpcstatus.Wrap(rpcstatus.Internal, err)
+			chunkSize, err2, done := endpoint.loop(unsentAmount, maximumChunkSize, throttle, ctx, pieceReader, currentOffset, stream)
+			if done {
+				return err2
 			}
 
 			currentOffset += chunkSize
@@ -797,6 +762,81 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 	// ensure we wait for sender to complete
 	sendErr := group.Wait()
 	return rpcstatus.Wrap(rpcstatus.Internal, errs.Combine(sendErr, recvErr))
+}
+
+func ConsumeOrWait(ctx context.Context, throttle *sync2.Throttle, tryToSend int64) (res int64, err error) {
+	mon.Task()(&ctx)(&err)
+	return throttle.ConsumeOrWait(tryToSend)
+}
+
+func (endpoint *Endpoint) loop(unsentAmount int64, maximumChunkSize int64, throttle *sync2.Throttle, ctx context.Context, pieceReader *pieces.Reader, currentOffset int64, stream pb.DRPCPiecestore_DownloadStream) (chunkSize int64, err error, done bool) {
+	mon.Task()(&ctx)(&err)
+
+	tryToSend := min(unsentAmount, maximumChunkSize)
+
+	// TODO: add timeout here
+	chunkSize, err = ConsumeOrWait(ctx, throttle, tryToSend)
+	if err != nil {
+		// this can happen only because uplink decided to close the connection
+		return 0, nil, true //nolint: nilerr // We don't need to return an error when client cancels.
+	}
+
+	chunkData := make([]byte, chunkSize)
+	err = endpoint.seek(ctx, pieceReader, currentOffset)
+	if err != nil {
+		return 0, err, true
+	}
+
+	err = endpoint.read(ctx, pieceReader, chunkData)
+	if err != nil {
+		return 0, err, true
+	}
+
+	err = endpoint.send(ctx, stream, currentOffset, chunkData)
+	if errs.Is(err, io.EOF) {
+		// err is io.EOF when uplink asked for a piece, but decided not to retrieve it,
+		// no need to propagate it
+		return 0, nil, true
+	}
+	if err != nil {
+		return 0, rpcstatus.Wrap(rpcstatus.Internal, err), true
+	}
+	return chunkSize, nil, false
+}
+
+func (endpoint *Endpoint) send(ctx context.Context, stream pb.DRPCPiecestore_DownloadStream, currentOffset int64, chunkData []byte) (err error) {
+	mon.Task()(&ctx)(&err)
+	err = rpctimeout.Run(ctx, endpoint.config.StreamOperationTimeout, func(_ context.Context) (err error) {
+		mon.Task(monkit.NewSeriesTag("piece", "send"))(&ctx)(&err)
+		return stream.Send(&pb.PieceDownloadResponse{
+			Chunk: &pb.PieceDownloadResponse_Chunk{
+				Offset: currentOffset,
+				Data:   chunkData,
+			},
+		})
+	})
+	return err
+}
+
+func (endpoint *Endpoint) read(ctx context.Context, pieceReader *pieces.Reader, chunkData []byte) (err error) {
+	mon.Task()(&ctx)(&err)
+	// ReadFull is required to ensure we are sending the right amount of data.
+	_, err = io.ReadFull(pieceReader, chunkData)
+	if err != nil {
+		endpoint.log.Error("error reading from piecereader", zap.Error(err))
+		return rpcstatus.Wrap(rpcstatus.Internal, err)
+	}
+	return err
+}
+
+func (endpoint *Endpoint) seek(ctx context.Context, pieceReader *pieces.Reader, currentOffset int64) (err error) {
+	mon.Task()(&ctx)(&err)
+	_, err = pieceReader.Seek(currentOffset, io.SeekStart)
+	if err != nil {
+		endpoint.log.Error("error seeking on piecereader", zap.Error(err))
+		return rpcstatus.Wrap(rpcstatus.Internal, err)
+	}
+	return nil
 }
 
 // beginSaveOrder saves the order with all necessary information. It assumes it has been already verified.
