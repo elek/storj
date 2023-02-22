@@ -807,7 +807,7 @@ func (endpoint *Endpoint) loop(unsentAmount int64, maximumChunkSize int64, throt
 func (endpoint *Endpoint) send(ctx context.Context, stream pb.DRPCPiecestore_DownloadStream, currentOffset int64, chunkData []byte) (err error) {
 	defer mon.Task()(&ctx)(&err)
 	err = rpctimeout.Run(ctx, endpoint.config.StreamOperationTimeout, func(_ context.Context) (err error) {
-		mon.Task(monkit.NewSeriesTag("piece", "send"))(&ctx)(&err)
+		defer mon.Task(monkit.NewSeriesTag("piece", "send"))(&ctx)(&err)
 		return stream.Send(&pb.PieceDownloadResponse{
 			Chunk: &pb.PieceDownloadResponse_Chunk{
 				Offset: currentOffset,
