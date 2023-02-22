@@ -52,13 +52,13 @@ func newBlobReader(ctx context.Context, file *os.File, formatVersion storage.For
 
 func (blob *blobReader) Read(p []byte) (n int, err error) {
 	ctx := blob.ctx
-	mon.Task()(&ctx)(&err)
+	defer mon.Task()(&ctx)(&err)
 	return blob.File.Read(p)
 }
 
 func (blob *blobReader) ReadAt(p []byte, off int64) (n int, err error) {
 	ctx := blob.ctx
-	mon.Task()(&ctx)(&err)
+	defer mon.Task()(&ctx)(&err)
 	return blob.File.ReadAt(p, off)
 }
 

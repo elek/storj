@@ -662,7 +662,7 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 		}
 
 		err = rpctimeout.Run(ctx, endpoint.config.StreamOperationTimeout, func(_ context.Context) (err error) {
-			mon.Task(monkit.NewSeriesTag("piece", "send"))(&ctx)(&err)
+			defer mon.Task(monkit.NewSeriesTag("piece", "send"))(&ctx)(&err)
 			return stream.Send(&pb.PieceDownloadResponse{Hash: &pieceHash, Limit: &orderLimit})
 		})
 		if err != nil {
@@ -700,7 +700,7 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 		return nil
 	})
 
-	recvErr := func() (err error) {
+	recvErr := func(ctx context.Context) (err error) {
 		commitOrderToStore, err := endpoint.beginSaveOrder(limit)
 		if err != nil {
 			return err
@@ -734,7 +734,7 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 			// N.B.: we are only allowed to use message if the returned error is nil. it would be
 			// a race condition otherwise as Run does not wait for the closure to exit.
 			err = rpctimeout.Run(ctx, endpoint.config.StreamOperationTimeout, func(_ context.Context) (err error) {
-				mon.Task(monkit.NewSeriesTag("piece", "recv"))(&ctx)(&err)
+				defer mon.Task(monkit.NewSeriesTag("piece", "recv"))(&ctx)(&err)
 				message, err = stream.Recv()
 				return err
 			})
@@ -757,7 +757,7 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 				return err
 			}
 		}
-	}()
+	}(ctx)
 
 	// ensure we wait for sender to complete
 	sendErr := group.Wait()
@@ -765,12 +765,12 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 }
 
 func ConsumeOrWait(ctx context.Context, throttle *sync2.Throttle, tryToSend int64) (res int64, err error) {
-	mon.Task()(&ctx)(&err)
+	defer mon.Task()(&ctx)(&err)
 	return throttle.ConsumeOrWait(tryToSend)
 }
 
 func (endpoint *Endpoint) loop(unsentAmount int64, maximumChunkSize int64, throttle *sync2.Throttle, ctx context.Context, pieceReader *pieces.Reader, currentOffset int64, stream pb.DRPCPiecestore_DownloadStream) (chunkSize int64, err error, done bool) {
-	mon.Task()(&ctx)(&err)
+	defer mon.Task()(&ctx)(&err)
 
 	tryToSend := min(unsentAmount, maximumChunkSize)
 
@@ -805,7 +805,7 @@ func (endpoint *Endpoint) loop(unsentAmount int64, maximumChunkSize int64, throt
 }
 
 func (endpoint *Endpoint) send(ctx context.Context, stream pb.DRPCPiecestore_DownloadStream, currentOffset int64, chunkData []byte) (err error) {
-	mon.Task()(&ctx)(&err)
+	defer mon.Task()(&ctx)(&err)
 	err = rpctimeout.Run(ctx, endpoint.config.StreamOperationTimeout, func(_ context.Context) (err error) {
 		mon.Task(monkit.NewSeriesTag("piece", "send"))(&ctx)(&err)
 		return stream.Send(&pb.PieceDownloadResponse{
@@ -819,7 +819,7 @@ func (endpoint *Endpoint) send(ctx context.Context, stream pb.DRPCPiecestore_Dow
 }
 
 func (endpoint *Endpoint) read(ctx context.Context, pieceReader *pieces.Reader, chunkData []byte) (err error) {
-	mon.Task()(&ctx)(&err)
+	defer mon.Task()(&ctx)(&err)
 	// ReadFull is required to ensure we are sending the right amount of data.
 	_, err = io.ReadFull(pieceReader, chunkData)
 	if err != nil {
@@ -830,7 +830,7 @@ func (endpoint *Endpoint) read(ctx context.Context, pieceReader *pieces.Reader, 
 }
 
 func (endpoint *Endpoint) seek(ctx context.Context, pieceReader *pieces.Reader, currentOffset int64) (err error) {
-	mon.Task()(&ctx)(&err)
+	defer mon.Task()(&ctx)(&err)
 	_, err = pieceReader.Seek(currentOffset, io.SeekStart)
 	if err != nil {
 		endpoint.log.Error("error seeking on piecereader", zap.Error(err))
