@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/jtolio/noiseconn"
+	qg "github.com/quic-go/quic-go"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -273,7 +274,13 @@ func (p *Server) Run(ctx context.Context) (err error) {
 	if p.publicUDPConn != nil {
 		// TODO: we goofed here. we need something like a drpcmigrate.ListenMux
 		// for UDP packets.
-		publicQUICListener, err := quic.NewListener(p.publicUDPConn, p.tlsOptions.ServerTLSConfig(), nil)
+
+		publicQUICListener, err := quic.NewListener(p.publicUDPConn, p.tlsOptions.ServerTLSConfig(), &qg.Config{
+			InitialStreamReceiveWindow:     20 * 1024 * 1024,
+			InitialConnectionReceiveWindow: 20 * 1024 * 1024,
+			MaxConnectionReceiveWindow:     20 * 1024 * 1024,
+			MaxStreamReceiveWindow:         20 * 1024 * 1024,
+		})
 		if err != nil {
 			return err
 		}
