@@ -256,15 +256,6 @@ func (ex *external) Wrap(ctx context.Context, cmd clingy.Command) (err error) {
 	if exp != "" {
 		ctx = experiment.With(ctx, exp)
 	}
-	quick := os.Getenv("STORJ_EXPERIMENTAL_QUIC_ROLLUP")
-	if quick != "" {
-		percent, err := strconv.Atoi(quick)
-		if err != nil {
-			return errs.Wrap(err)
-		}
-		ctx = rpc.WithQUICRolloutPercent(ctx, percent)
-	}
-
 	quickOnly := os.Getenv("STORJ_EXPERIMENTAL_QUIC_ONLY")
 	if quickOnly != "" {
 

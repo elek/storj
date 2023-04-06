@@ -135,3 +135,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	storj.io/picobuf v0.0.1 // indirect
 )
+
+replace storj.io/common => github.com/elek/common v0.0.0-20230406104356-742ee7aa7b36
