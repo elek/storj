@@ -29,7 +29,7 @@ node('node') {
         bat 'installer\\windows\\buildrelease.bat'
 
         stash name: "storagenode-installer", includes: "release/**/storagenode*.msi"
-
+        archiveArtifacts artifacts: 'release/**/storagenode*.msi', followSymlinks: false
         echo "Current build result: ${currentBuild.result}"
       }
     }
