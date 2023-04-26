@@ -112,7 +112,7 @@ namespace Storj
     {
         public const long GB = 1000 * 1000 * 1000;
         public const long TB = (long)1000 * 1000 * 1000 * 1000;
-        public const long MinFreeSpace = 550 * GB; // (500 GB + 10% overhead)
+        public const long MinFreeSpace = 5 * GB; // (500 GB + 10% overhead)
 
         private readonly IFileSystem fs;
 
