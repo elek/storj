@@ -98,6 +98,8 @@ github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cu
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
 github.com/dsnet/try v0.0.3 h1:ptR59SsrcFUYbT/FhAbKTV6iLkeD6O18qfIWRml2fqI=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
+github.com/elek/uplink v1.5.0-rc.1.0.20230503080306-1f320dd4f328 h1:WXInzDP3j/shUu0A2Z3PtPqz2flTDG9/r0H54nVvm0c=
+github.com/elek/uplink v1.5.0-rc.1.0.20230503080306-1f320dd4f328/go.mod h1:x6XS4VpmVMU2N/VXm7QGS2M4Ar1+FmWa0lZGYfhMCww=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/fasthttp-contrib/websocket v0.0.0-20160511215533-1f3b11f56072/go.mod h1:duJ4Jxv5lDcvg4QuQr0oowTf7dz4/CR8NtyCooz9HL8=
@@ -985,5 +987,3 @@ storj.io/picobuf v0.0.1 h1:ekEvxSQCbEjTVIi/qxj2za13SJyfRE37yE30IBkZeT0=
 storj.io/picobuf v0.0.1/go.mod h1:7ZTAMs6VesgTHbbhFU79oQ9hDaJ+MD4uoFQZ1P4SEz0=
 storj.io/private v0.0.0-20230405095015-9e5bbc1c7ca8 h1:bUSNdChb1E5a/IFAy1l5zq+oZIYR5WPJ1JC71GC12dA=
 storj.io/private v0.0.0-20230405095015-9e5bbc1c7ca8/go.mod h1:JxBlgPwo+P0OOJDSPJLwBJWUPnhnvrHOlKAN0aV/bhY=
-storj.io/uplink v1.10.1-0.20230406095800-66d57268466a h1:+YdRBhQtRHfK92yuZHrAOdl471oGrnTj239mIwBEvbM=
-storj.io/uplink v1.10.1-0.20230406095800-66d57268466a/go.mod h1:x6XS4VpmVMU2N/VXm7QGS2M4Ar1+FmWa0lZGYfhMCww=

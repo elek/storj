@@ -139,3 +139,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	storj.io/picobuf v0.0.1 // indirect
 )
+
+replace storj.io/uplink => github.com/elek/uplink v1.5.0-rc.1.0.20230503080306-1f320dd4f328
