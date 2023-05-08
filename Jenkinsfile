@@ -30,6 +30,7 @@ node('node') {
 
         stash name: "storagenode-installer", includes: "release/**/storagenode*.msi"
         archiveArtifacts artifacts: 'release/**/storagenode*.msi', followSymlinks: false
+        archiveArtifacts artifacts: 'release/**/storagenode*.exe', followSymlinks: false
         echo "Current build result: ${currentBuild.result}"
       }
     }
