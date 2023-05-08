@@ -15,7 +15,6 @@ package main
 import (
 	"os"
 
-	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sys/windows/svc"
@@ -23,9 +22,7 @@ import (
 	"storj.io/private/process"
 )
 
-var rootCmd, runCmd *cobra.Command
-
-func startAsService() bool {
+func startAsService(cmd *cobra.Command) bool {
 	isService, err := svc.IsWindowsService()
 	if err != nil {
 		zap.L().Fatal("Failed to determine if session is a service.", zap.Error(err))
@@ -43,12 +40,10 @@ func startAsService() bool {
 		return false
 	}
 
-	var factory *Factory
-	rootCmd, factory = newRootCmd(true)
-	runCmd = newRunCmd(factory)
-
 	// Initialize the Windows Service handler
-	err = svc.Run("storagenode", &service{})
+	err = svc.Run("storagenode", &service{
+		runCmd: cmd,
+	})
 	if err != nil {
 		zap.L().Fatal("Service failed.", zap.Error(err))
 	}
@@ -56,7 +51,9 @@ func startAsService() bool {
 	return true
 }
 
-type service struct{}
+type service struct {
+	runCmd *cobra.Command
+}
 
 func (m *service) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
@@ -82,7 +79,7 @@ cmdloop:
 			zap.L().Info("Stop/Shutdown request received.")
 
 			// Cancel the command's root context to cleanup resources
-			_, cancel := process.Ctx(runCmd)
+			_, cancel := process.Ctx(m.runCmd)
 			cancel()
 
 			changes <- svc.Status{State: svc.StopPending, Accepts: cmdsAccepted}

@@ -6,6 +6,7 @@ package main
 import (
 	"os"
 
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
 	"storj.io/private/process"
@@ -16,12 +17,23 @@ import (
 func main() {
 	process.SetHardcodedApplicationName("storagenode")
 
-	if startAsService() {
-		return
-	}
-
 	allowDefaults := !isFilewalkerCommand()
 	rootCmd, _ := newRootCmd(allowDefaults)
+
+	var runCmd *cobra.Command
+	for _, c := range rootCmd.Commands() {
+		if c.Use == "run" {
+			runCmd = c
+		}
+	}
+
+	if runCmd == nil {
+		panic("Assertion is failed: 'run' sub-command is not found.")
+	}
+
+	if startAsService(runCmd) {
+		return
+	}
 
 	loggerFunc := func(logger *zap.Logger) *zap.Logger {
 		return logger.With(zap.String("process", rootCmd.Use))
