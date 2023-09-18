@@ -68,8 +68,10 @@ type external struct {
 	}
 
 	debug struct {
-		pprofFile string
-		traceFile string
+		pprofFile      string
+		traceFile      string
+		monkitSpanFile string
+		monkitStatFile string
 	}
 
 	events struct {
@@ -143,12 +145,22 @@ func (ex *external) Setup(f clingy.Flags) {
 
 	ex.debug.pprofFile = f.Flag(
 		"debug-pprof", "File to collect Golang pprof profiling data", "",
-		clingy.Advanced,
+		clingy.Advanced, clingy.Hidden,
 	).(string)
 
 	ex.debug.traceFile = f.Flag(
 		"debug-trace", "File to collect Golang trace data", "",
-		clingy.Advanced,
+		clingy.Advanced, clingy.Hidden,
+	).(string)
+
+	ex.debug.monkitStatFile = f.Flag(
+		"debug-monkit-stat", "File to collect all monkit metrics at the end", "",
+		clingy.Advanced, clingy.Hidden,
+	).(string)
+
+	ex.debug.monkitSpanFile = f.Flag(
+		"debug-monkit-spans", "File to collect all monkit span execution data", "",
+		clingy.Advanced, clingy.Hidden,
 	).(string)
 
 	ex.analytics = f.Flag(
@@ -289,6 +301,37 @@ func (ex *external) Wrap(ctx context.Context, cmd clingy.Command) (err error) {
 			return errs.Wrap(err)
 		}
 		defer trace.Stop()
+	}
+
+	if ex.debug.monkitStatFile != "" {
+		defer func() {
+			out, err := os.Create(ex.debug.monkitStatFile)
+			if err != nil {
+				fmt.Println("Couldn't print out monkit data", err.Error())
+				return
+			}
+			monkit.Default.Stats(func(key monkit.SeriesKey, field string, val float64) {
+				_, err = fmt.Fprintln(out, key, field, val)
+				if err != nil {
+					fmt.Println("Couldn't print out monkit data", err.Error())
+				}
+			})
+			_ = out.Close()
+		}()
+	}
+
+	if ex.debug.monkitSpanFile != "" {
+		out, err := os.Create(ex.debug.monkitSpanFile)
+		if err != nil {
+			panic(err)
+		}
+		defer func() {
+			_ = out.Close()
+		}()
+		observer := &SpanDebugObserver{out: out}
+		monkit.Default.ObserveTraces(func(t *monkit.Trace) {
+			t.ObserveSpans(observer)
+		})
 	}
 
 	// N.B.: Tracing is currently disabled by default (sample == 0, traceID == 0) and is
@@ -502,3 +545,17 @@ func appDir(legacy bool, subdir ...string) string {
 	}
 	return filepath.Join(append([]string{appdir}, subdir...)...)
 }
+
+type SpanDebugObserver struct {
+	out io.Writer
+}
+
+func (s *SpanDebugObserver) Start(span *monkit.Span) {
+
+}
+
+func (s *SpanDebugObserver) Finish(span *monkit.Span, err error, panicked bool, finish time.Time) {
+	_, _ = fmt.Fprintf(s.out, "finish %d %s %s %v %d\n", span.Id(), span.Func().FullName(), span.Args(), span.Err(), finish.Sub(span.Start()).Milliseconds())
+}
+
+var _ monkit.SpanObserver = &SpanDebugObserver{}
