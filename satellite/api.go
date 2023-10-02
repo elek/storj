@@ -5,14 +5,15 @@ package satellite
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"os"
 	"runtime/pprof"
+	"storj.io/storj/satellite/buckets"
+	"storj.io/storj/satellite/modules"
+	"storj.io/storj/satellite/payments/stripe"
 	"strings"
 
-	"github.com/spacemonkeygo/monkit/v3"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -25,15 +26,12 @@ import (
 	"storj.io/common/rpc"
 	"storj.io/common/signing"
 	"storj.io/common/storj"
-	"storj.io/private/debug"
 	"storj.io/private/version"
 	"storj.io/storj/private/lifecycle"
 	"storj.io/storj/private/server"
 	"storj.io/storj/private/version/checker"
-	"storj.io/storj/satellite/abtesting"
 	"storj.io/storj/satellite/accounting"
 	"storj.io/storj/satellite/analytics"
-	"storj.io/storj/satellite/buckets"
 	"storj.io/storj/satellite/console"
 	"storj.io/storj/satellite/console/consoleauth"
 	"storj.io/storj/satellite/console/consoleweb"
@@ -45,12 +43,10 @@ import (
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/metainfo"
 	"storj.io/storj/satellite/nodestats"
-	"storj.io/storj/satellite/oidc"
 	"storj.io/storj/satellite/orders"
 	"storj.io/storj/satellite/overlay"
 	"storj.io/storj/satellite/payments"
 	"storj.io/storj/satellite/payments/storjscan"
-	"storj.io/storj/satellite/payments/stripe"
 	"storj.io/storj/satellite/reputation"
 	"storj.io/storj/satellite/snopayouts"
 )
@@ -73,11 +69,6 @@ type API struct {
 	Version struct {
 		Chore   *checker.Chore
 		Service *checker.Service
-	}
-
-	Debug struct {
-		Listener net.Listener
-		Server   *debug.Server
 	}
 
 	Contact struct {
@@ -152,10 +143,6 @@ type API struct {
 		Endpoint *nodestats.Endpoint
 	}
 
-	OIDC struct {
-		Service *oidc.Service
-	}
-
 	SNOPayouts struct {
 		Endpoint *snopayouts.Endpoint
 		Service  *snopayouts.Service
@@ -170,10 +157,6 @@ type API struct {
 		Service *analytics.Service
 	}
 
-	ABTesting struct {
-		Service *abtesting.Service
-	}
-
 	Buckets struct {
 		Service *buckets.Service
 	}
@@ -183,7 +166,7 @@ type API struct {
 func NewAPI(log *zap.Logger, full *identity.FullIdentity, db DB,
 	metabaseDB *metabase.DB, revocationDB extensions.RevocationDB,
 	liveAccounting accounting.Cache, rollupsWriteCache *orders.RollupsWriteCache,
-	config *Config, versionInfo version.Info, atomicLogLevel *zap.AtomicLevel) (*API, error) {
+	config *Config, versionInfo version.Info, services modules.RegisteredServices, extensions consoleweb.RegisteredExtensions) (*API, error) {
 	peer := &API{
 		Log:             log,
 		Identity:        full,
@@ -194,30 +177,11 @@ func NewAPI(log *zap.Logger, full *identity.FullIdentity, db DB,
 		Services: lifecycle.NewGroup(log.Named("services")),
 	}
 
+	var err error
+
 	{ // setup buckets service
 		peer.Buckets.Service = buckets.NewService(db.Buckets(), metabaseDB)
 	}
-
-	{ // setup debug
-		var err error
-		if config.Debug.Address != "" {
-			peer.Debug.Listener, err = net.Listen("tcp", config.Debug.Address)
-			if err != nil {
-				withoutStack := errors.New(err.Error())
-				peer.Log.Debug("failed to start debug endpoints", zap.Error(withoutStack))
-			}
-		}
-		debugConfig := config.Debug
-		debugConfig.ControlTitle = "API"
-		peer.Debug.Server = debug.NewServerWithAtomicLevel(log.Named("debug"), peer.Debug.Listener, monkit.Default, debugConfig, atomicLogLevel)
-		peer.Servers.Add(lifecycle.Item{
-			Name:  "debug",
-			Run:   peer.Debug.Server.Run,
-			Close: peer.Debug.Server.Close,
-		})
-	}
-
-	var err error
 
 	{
 		peer.Log.Info("Version info",
@@ -289,7 +253,7 @@ func NewAPI(log *zap.Logger, full *identity.FullIdentity, db DB,
 	{ // setup overlay
 		peer.Overlay.DB = peer.DB.OverlayCache()
 
-		peer.Overlay.Service, err = overlay.NewService(peer.Log.Named("overlay"), peer.Overlay.DB, peer.DB.NodeEvents(), placements.CreateFilters, config.Console.ExternalAddress, config.Console.SatelliteName, config.Overlay)
+		peer.Overlay.Service, err = overlay.NewService(peer.Log.Named("overlay"), peer.Overlay.DB, peer.DB.NodeEvents(), placements.CreateFilters, config.Overlay)
 		if err != nil {
 			return nil, errs.Combine(err, peer.Close())
 		}
@@ -375,10 +339,6 @@ func NewAPI(log *zap.Logger, full *identity.FullIdentity, db DB,
 		)
 	}
 
-	{ // setup oidc
-		peer.OIDC.Service = oidc.NewService(db.OIDC())
-	}
-
 	placement, err := config.Placement.Parse()
 	if err != nil {
 		return nil, err
@@ -392,8 +352,8 @@ func NewAPI(log *zap.Logger, full *identity.FullIdentity, db DB,
 			Run:   peer.Orders.Chore.Run,
 			Close: peer.Orders.Chore.Close,
 		})
-		peer.Debug.Server.Panel.Add(
-			debug.Cycle("Orders Chore", peer.Orders.Chore.Loop))
+		//peer.Debug.Server.Panel.Add(
+		//	debug.Cycle("Orders Chore", peer.Orders.Chore.Loop))
 		var err error
 		peer.Orders.Service, err = orders.NewService(
 			peer.Log.Named("orders:service"),
@@ -429,14 +389,6 @@ func NewAPI(log *zap.Logger, full *identity.FullIdentity, db DB,
 			Name:  "analytics:service",
 			Run:   peer.Analytics.Service.Run,
 			Close: peer.Analytics.Service.Close,
-		})
-	}
-
-	{ // setup AB test service
-		peer.ABTesting.Service = abtesting.NewService(peer.Log.Named("abtesting:service"), config.Console.ABTesting)
-
-		peer.Services.Add(lifecycle.Item{
-			Name: "abtesting:service",
 		})
 	}
 
@@ -618,16 +570,15 @@ func NewAPI(log *zap.Logger, full *identity.FullIdentity, db DB,
 			peer.Log.Named("console:endpoint"),
 			consoleConfig,
 			peer.Console.Service,
-			peer.OIDC.Service,
 			peer.Mail.Service,
 			peer.Analytics.Service,
-			peer.ABTesting.Service,
 			accountFreezeService,
 			peer.Console.Listener,
 			config.Payments.StripeCoinPayments.StripePublicKey,
 			config.Payments.Storjscan.Confirmations,
 			peer.URL(),
 			config.Payments.PackagePlans,
+			extensions,
 		)
 
 		peer.Servers.Add(lifecycle.Item{
@@ -686,6 +637,10 @@ func NewAPI(log *zap.Logger, full *identity.FullIdentity, db DB,
 		} else {
 			peer.Log.Named("gracefulexit").Info("disabled")
 		}
+	}
+
+	for _, service := range services.Services {
+		peer.Services.Add(service)
 	}
 
 	return peer, nil

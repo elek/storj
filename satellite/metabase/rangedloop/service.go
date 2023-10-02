@@ -6,6 +6,7 @@ package rangedloop
 import (
 	"context"
 	"fmt"
+	"go.uber.org/fx"
 	"time"
 
 	"github.com/jtolio/eventkit"
@@ -47,14 +48,22 @@ type Service struct {
 	Loop *sync2.Cycle
 }
 
+type ServiceDependencies struct {
+	fx.In
+	Log       *zap.Logger
+	Config    Config
+	Provider  RangeSplitter
+	Observers []Observer `group:"observer"`
+}
+
 // NewService creates a new instance of the ranged loop service.
-func NewService(log *zap.Logger, config Config, provider RangeSplitter, observers []Observer) *Service {
+func NewService(deps ServiceDependencies) *Service {
 	return &Service{
-		log:       log,
-		config:    config,
-		provider:  provider,
-		observers: observers,
-		Loop:      sync2.NewCycle(config.Interval),
+		log:       deps.Log.Named("rangedloop"),
+		config:    deps.Config,
+		provider:  deps.Provider,
+		observers: deps.Observers,
+		Loop:      sync2.NewCycle(deps.Config.Interval),
 	}
 }
 

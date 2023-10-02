@@ -36,14 +36,12 @@ import (
 	"storj.io/common/memory"
 	"storj.io/common/storj"
 	"storj.io/storj/private/web"
-	"storj.io/storj/satellite/abtesting"
 	"storj.io/storj/satellite/analytics"
 	"storj.io/storj/satellite/console"
 	"storj.io/storj/satellite/console/consoleweb/consoleapi"
 	"storj.io/storj/satellite/console/consoleweb/consoleql"
 	"storj.io/storj/satellite/console/consoleweb/consolewebauth"
 	"storj.io/storj/satellite/mailservice"
-	"storj.io/storj/satellite/oidc"
 	"storj.io/storj/satellite/payments/paymentsconfig"
 )
 
@@ -121,8 +119,6 @@ type Config struct {
 	// RateLimit defines the configuration for the IP and userID rate limiters.
 	RateLimit web.RateLimiterConfig
 
-	ABTesting abtesting.Config
-
 	console.Config
 }
 
@@ -136,7 +132,6 @@ type Server struct {
 	service     *console.Service
 	mailService *mailservice.Service
 	analytics   *analytics.Service
-	abTesting   *abtesting.Service
 
 	listener          net.Listener
 	server            http.Server
@@ -212,8 +207,10 @@ func (a *apiAuth) RemoveAuthCookie(w http.ResponseWriter) {
 	a.server.cookieAuth.RemoveTokenCookie(w)
 }
 
+type ConsoleExtension func(router *mux.Router, ch mux.MiddlewareFunc, ah mux.MiddlewareFunc)
+
 // NewServer creates new instance of console server.
-func NewServer(logger *zap.Logger, config Config, service *console.Service, oidcService *oidc.Service, mailService *mailservice.Service, analytics *analytics.Service, abTesting *abtesting.Service, accountFreezeService *console.AccountFreezeService, listener net.Listener, stripePublicKey string, neededTokenPaymentConfirmations int, nodeURL storj.NodeURL, packagePlans paymentsconfig.PackagePlans) *Server {
+func NewServer(logger *zap.Logger, config Config, service *console.Service, mailService *mailservice.Service, analytics *analytics.Service, accountFreezeService *console.AccountFreezeService, listener net.Listener, stripePublicKey string, neededTokenPaymentConfirmations int, nodeURL storj.NodeURL, packagePlans paymentsconfig.PackagePlans, extensions RegisteredExtensions) *Server {
 	initAdditionalMimeTypes()
 
 	server := Server{
@@ -223,7 +220,6 @@ func NewServer(logger *zap.Logger, config Config, service *console.Service, oidc
 		service:                         service,
 		mailService:                     mailService,
 		analytics:                       analytics,
-		abTesting:                       abTesting,
 		stripePublicKey:                 stripePublicKey,
 		neededTokenPaymentConfirmations: neededTokenPaymentConfirmations,
 		ipRateLimiter:                   web.NewIPRateLimiter(config.RateLimit, logger),
@@ -323,15 +319,6 @@ func NewServer(logger *zap.Logger, config Config, service *console.Service, oidc
 	authRouter.Handle("/reset-password", server.ipRateLimiter.Limit(http.HandlerFunc(authController.ResetPassword))).Methods(http.MethodPost, http.MethodOptions)
 	authRouter.Handle("/refresh-session", server.withAuth(http.HandlerFunc(authController.RefreshSession))).Methods(http.MethodPost, http.MethodOptions)
 
-	if config.ABTesting.Enabled {
-		abController := consoleapi.NewABTesting(logger, abTesting)
-		abRouter := router.PathPrefix("/api/v0/ab").Subrouter()
-		abRouter.Use(server.withCORS)
-		abRouter.Use(server.withAuth)
-		abRouter.Handle("/values", http.HandlerFunc(abController.GetABValues)).Methods(http.MethodGet, http.MethodOptions)
-		abRouter.Handle("/hit/{action}", http.HandlerFunc(abController.SendHit)).Methods(http.MethodPost, http.MethodOptions)
-	}
-
 	paymentController := consoleapi.NewPayments(logger, service, accountFreezeService, packagePlans)
 	paymentsRouter := router.PathPrefix("/api/v0/payments").Subrouter()
 	paymentsRouter.Use(server.withCORS)
@@ -381,21 +368,13 @@ func NewServer(logger *zap.Logger, config Config, service *console.Service, oidc
 	analyticsRouter.HandleFunc("/event", analyticsController.EventTriggered).Methods(http.MethodPost, http.MethodOptions)
 	analyticsRouter.HandleFunc("/page", analyticsController.PageEventTriggered).Methods(http.MethodPost, http.MethodOptions)
 
-	oidc := oidc.NewEndpoint(
-		server.nodeURL, server.config.ExternalAddress,
-		logger, oidcService, service,
-		server.config.OauthCodeExpiry, server.config.OauthAccessTokenExpiry, server.config.OauthRefreshTokenExpiry,
-	)
-
-	router.HandleFunc("/api/v0/.well-known/openid-configuration", oidc.WellKnownConfiguration)
-	router.Handle("/api/v0/oauth/v2/authorize", server.withAuth(http.HandlerFunc(oidc.AuthorizeUser))).Methods(http.MethodPost)
-	router.Handle("/api/v0/oauth/v2/tokens", server.ipRateLimiter.Limit(http.HandlerFunc(oidc.Tokens))).Methods(http.MethodPost)
-	router.Handle("/api/v0/oauth/v2/userinfo", server.ipRateLimiter.Limit(http.HandlerFunc(oidc.UserInfo))).Methods(http.MethodGet)
-	router.Handle("/api/v0/oauth/v2/clients/{id}", server.withAuth(http.HandlerFunc(oidc.GetClient))).Methods(http.MethodGet)
-
 	router.HandleFunc("/invited", server.handleInvited)
 	router.HandleFunc("/activation", server.accountActivationHandler)
 	router.HandleFunc("/cancel-password-recovery", server.cancelPasswordRecoveryHandler)
+
+	for _, extension := range extensions.Extensions {
+		extension(router, server.withCORS, server.withAuth)
+	}
 
 	if server.config.StaticDir != "" && server.config.FrontendEnable {
 		fs := http.FileServer(http.Dir(server.config.StaticDir))
@@ -739,12 +718,12 @@ func (server *Server) frontendConfigHandler(w http.ResponseWriter, r *http.Reque
 		NativeTokenPaymentsEnabled:      server.config.NativeTokenPaymentsEnabled,
 		PasswordMinimumLength:           console.PasswordMinimumLength,
 		PasswordMaximumLength:           console.PasswordMaximumLength,
-		ABTestingEnabled:                server.config.ABTesting.Enabled,
-		PricingPackagesEnabled:          server.config.PricingPackagesEnabled,
-		NewUploadModalEnabled:           server.config.NewUploadModalEnabled,
-		GalleryViewEnabled:              server.config.GalleryViewEnabled,
-		NeededTransactionConfirmations:  server.neededTokenPaymentConfirmations,
-		ObjectBrowserPaginationEnabled:  server.config.ObjectBrowserPaginationEnabled,
+		//TODO
+		PricingPackagesEnabled:         server.config.PricingPackagesEnabled,
+		NewUploadModalEnabled:          server.config.NewUploadModalEnabled,
+		GalleryViewEnabled:             server.config.GalleryViewEnabled,
+		NeededTransactionConfirmations: server.neededTokenPaymentConfirmations,
+		ObjectBrowserPaginationEnabled: server.config.ObjectBrowserPaginationEnabled,
 	}
 
 	err := json.NewEncoder(w).Encode(&cfg)

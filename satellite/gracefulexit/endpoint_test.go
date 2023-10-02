@@ -6,6 +6,7 @@ package gracefulexit_test
 import (
 	"context"
 	"io"
+	storagenode2 "storj.io/storj/private/testplanet/storagenode"
 	"strconv"
 	"testing"
 	"time"
@@ -1697,7 +1698,7 @@ func testTransfers(t *testing.T, objects int, multipartObjects int, verifier fun
 	})
 }
 
-func findNodeToExit(ctx context.Context, planet *testplanet.Planet, objects int) (*testplanet.StorageNode, error) {
+func findNodeToExit(ctx context.Context, planet *testplanet.Planet, objects int) (*storagenode2.StorageNode, error) {
 	satellite := planet.Satellites[0]
 
 	pieceCountMap := make(map[storj.NodeID]int, len(planet.StorageNodes))
@@ -1908,7 +1909,7 @@ func hasDuplicates(pieces metabase.Pieces) bool {
 	return false
 }
 
-func callProcess(ctx *testcontext.Context, exitingNode *testplanet.StorageNode, satellite *testplanet.Satellite) (*pb.SatelliteMessage, error) {
+func callProcess(ctx *testcontext.Context, exitingNode *storagenode2.StorageNode, satellite *testplanet.Satellite) (*pb.SatelliteMessage, error) {
 	conn, err := exitingNode.Dialer.DialNodeURL(ctx, satellite.NodeURL())
 	if err != nil {
 		return nil, err

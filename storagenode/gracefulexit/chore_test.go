@@ -5,6 +5,7 @@ package gracefulexit_test
 
 import (
 	"context"
+	"storj.io/storj/private/testplanet/storagenode"
 	"sync"
 	"testing"
 	"time"
@@ -98,7 +99,7 @@ func TestChore(t *testing.T) {
 	})
 }
 
-func exitSatellite(ctx context.Context, t *testing.T, planet *testplanet.Planet, exitingNode *testplanet.StorageNode) {
+func exitSatellite(ctx context.Context, t *testing.T, planet *testplanet.Planet, exitingNode *storagenode.StorageNode) {
 	satellite1 := planet.Satellites[0]
 	exitingNode.GracefulExit.Chore.Loop.Pause()
 
@@ -218,7 +219,7 @@ func getNodePieceCounts(ctx context.Context, planet *testplanet.Planet) (_ map[s
 }
 
 // findNodeToExit selects the node storing the most pieces as the node to graceful exit.
-func findNodeToExit(ctx context.Context, planet *testplanet.Planet) (*testplanet.StorageNode, error) {
+func findNodeToExit(ctx context.Context, planet *testplanet.Planet) (*storagenode.StorageNode, error) {
 	satellite := planet.Satellites[0]
 
 	objects, err := satellite.Metabase.DB.TestingAllSegments(ctx)

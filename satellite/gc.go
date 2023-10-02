@@ -5,11 +5,9 @@ package satellite
 
 import (
 	"context"
-	"errors"
 	"net"
 	"runtime/pprof"
 
-	"github.com/spacemonkeygo/monkit/v3"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -73,41 +71,6 @@ func NewGarbageCollection(log *zap.Logger, full *identity.FullIdentity, db DB,
 		Services: lifecycle.NewGroup(log.Named("services")),
 	}
 
-	{ // setup debug
-		var err error
-		if config.Debug.Address != "" {
-			peer.Debug.Listener, err = net.Listen("tcp", config.Debug.Address)
-			if err != nil {
-				withoutStack := errors.New(err.Error())
-				peer.Log.Debug("failed to start debug endpoints", zap.Error(withoutStack))
-			}
-		}
-		debugConfig := config.Debug
-		debugConfig.ControlTitle = "GC"
-		peer.Debug.Server = debug.NewServerWithAtomicLevel(log.Named("debug"), peer.Debug.Listener, monkit.Default, debugConfig, atomicLogLevel)
-		peer.Servers.Add(lifecycle.Item{
-			Name:  "debug",
-			Run:   peer.Debug.Server.Run,
-			Close: peer.Debug.Server.Close,
-		})
-	}
-
-	{ // setup version control
-		peer.Log.Info("Version info",
-			zap.Stringer("Version", versionInfo.Version.Version),
-			zap.String("Commit Hash", versionInfo.CommitHash),
-			zap.Stringer("Build Timestamp", versionInfo.Timestamp),
-			zap.Bool("Release Build", versionInfo.Release),
-		)
-		peer.Version.Service = version_checker.NewService(log.Named("version"), config.Version, versionInfo, "Satellite")
-		peer.Version.Chore = version_checker.NewChore(peer.Version.Service, config.Version.CheckInterval)
-
-		peer.Services.Add(lifecycle.Item{
-			Name: "version",
-			Run:  peer.Version.Chore.Run,
-		})
-	}
-
 	{ // setup listener and server
 		sc := config.Server
 
@@ -135,8 +98,8 @@ func NewGarbageCollection(log *zap.Logger, full *identity.FullIdentity, db DB,
 			Name: "gc-sender",
 			Run:  peer.GarbageCollection.Sender.Run,
 		})
-		peer.Debug.Server.Panel.Add(
-			debug.Cycle("Garbage Collection", peer.GarbageCollection.Sender.Loop))
+		//peer.Debug.Server.Panel.Add(
+		//	debug.Cycle("Garbage Collection", peer.GarbageCollection.Sender.Loop))
 	}
 
 	return peer, nil

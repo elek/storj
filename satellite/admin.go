@@ -5,11 +5,9 @@ package satellite
 
 import (
 	"context"
-	"errors"
 	"net"
 	"runtime/pprof"
 
-	"github.com/spacemonkeygo/monkit/v3"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -100,25 +98,6 @@ func NewAdmin(log *zap.Logger, full *identity.FullIdentity, db DB, metabaseDB *m
 
 	{ // setup rest keys
 		peer.REST.Keys = restkeys.NewService(db.OIDC().OAuthTokens(), config.RESTKeys)
-	}
-
-	{ // setup debug
-		var err error
-		if config.Debug.Address != "" {
-			peer.Debug.Listener, err = net.Listen("tcp", config.Debug.Address)
-			if err != nil {
-				withoutStack := errors.New(err.Error())
-				peer.Log.Debug("failed to start debug endpoints", zap.Error(withoutStack))
-			}
-		}
-		debugConfig := config.Debug
-		debugConfig.ControlTitle = "Admin"
-		peer.Debug.Server = debug.NewServerWithAtomicLevel(log.Named("debug"), peer.Debug.Listener, monkit.Default, debugConfig, atomicLogLevel)
-		peer.Servers.Add(lifecycle.Item{
-			Name:  "debug",
-			Run:   peer.Debug.Server.Run,
-			Close: peer.Debug.Server.Close,
-		})
 	}
 
 	{

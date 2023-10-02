@@ -5,6 +5,7 @@ package audit_test
 
 import (
 	"io"
+	"storj.io/storj/private/testplanet/storagenode"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -237,7 +238,7 @@ func uploadSomeData(t *testing.T, ctx *testcontext.Context, planet *testplanet.P
 	return segments[0]
 }
 
-func rewritePiece(t *testing.T, ctx *testcontext.Context, node *testplanet.StorageNode, satelliteID storj.NodeID, pieceID storj.PieceID, mutator func(contents []byte, header *pb.PieceHeader)) {
+func rewritePiece(t *testing.T, ctx *testcontext.Context, node *storagenode.StorageNode, satelliteID storj.NodeID, pieceID storj.PieceID, mutator func(contents []byte, header *pb.PieceHeader)) {
 	reader, err := node.Storage2.Store.Reader(ctx, satelliteID, pieceID)
 	require.NoError(t, err)
 	pieceHeader, err := reader.GetPieceHeader()

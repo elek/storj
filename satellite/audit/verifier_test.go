@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"os"
+	storagenode2 "storj.io/storj/private/testplanet/storagenode"
 	"syscall"
 	"testing"
 	"time"
@@ -1256,7 +1257,7 @@ func getRemoteSegment(
 }
 
 // corruptPieceData manipulates piece data on a storage node.
-func corruptPieceData(ctx context.Context, t *testing.T, planet *testplanet.Planet, corruptedNode *testplanet.StorageNode, corruptedPieceID storj.PieceID) {
+func corruptPieceData(ctx context.Context, t *testing.T, planet *testplanet.Planet, corruptedNode *storagenode2.StorageNode, corruptedPieceID storj.PieceID) {
 	t.Helper()
 
 	blobRef := blobstore.BlobRef{

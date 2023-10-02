@@ -38,7 +38,7 @@ var _ rangedloop.Partial = (*observerFork)(nil)
 // NewObserver returns a new ranged loop observer.
 func NewObserver(log *zap.Logger, db DB, overlay overlay.DB, metabase *metabase.DB, config Config) *Observer {
 	return &Observer{
-		log:      log,
+		log:      log.Named("gracefulexit:observer"),
 		db:       db,
 		overlay:  overlay,
 		metabase: metabase,

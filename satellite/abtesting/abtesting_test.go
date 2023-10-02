@@ -1,10 +1,11 @@
 // Copyright (C) 2022 Storj Labs, Inc.
 // See LICENSE for copying information.
 
-package consoleapi_test
+package abtesting_test
 
 import (
 	"net/http"
+	"storj.io/storj/satellite/console/consoleweb/consoleapi"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -41,7 +42,7 @@ func TestABMethodsOnError(t *testing.T) {
 		user, err := sat.AddUser(ctx, newUser, 1)
 		require.NoError(t, err)
 
-		_, status, err := doRequestWithAuth(ctx, t, sat, user, http.MethodGet, "ab/values", nil)
+		_, status, err := consoleapi.doRequestWithAuth(ctx, t, sat, user, http.MethodGet, "ab/values", nil)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, status)
 
@@ -49,7 +50,7 @@ func TestABMethodsOnError(t *testing.T) {
 		require.Error(t, err)
 		require.Nil(t, values)
 
-		_, status, err = doRequestWithAuth(ctx, t, sat, user, http.MethodPost, "ab/hit/upgrade-account", nil)
+		_, status, err = consoleapi.doRequestWithAuth(ctx, t, sat, user, http.MethodPost, "ab/hit/upgrade-account", nil)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 	})

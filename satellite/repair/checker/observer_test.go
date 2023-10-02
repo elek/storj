@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"storj.io/storj/private/testplanet/storagenode"
 	"strconv"
 	"testing"
 	"time"
@@ -698,7 +699,7 @@ func allPiecesInPlacement(ctx context.Context, overlay *overlay.Service, pieces 
 	return true, nil
 }
 
-func updateNodeStatus(ctx context.Context, satellite *testplanet.Satellite, node *testplanet.StorageNode, offline bool) error {
+func updateNodeStatus(ctx context.Context, satellite *testplanet.Satellite, node *storagenode.StorageNode, offline bool) error {
 	timestamp := time.Now()
 	if offline {
 		timestamp = time.Now().Add(-4 * time.Hour)

@@ -5,6 +5,7 @@ package overlay_test
 
 import (
 	"fmt"
+	storagenode2 "storj.io/storj/private/testplanet/storagenode"
 	"testing"
 	"time"
 
@@ -160,7 +161,7 @@ func TestOperatorConfig(t *testing.T) {
 
 		cache := planet.Satellites[0].DB.OverlayCache()
 
-		for _, node := range []*testplanet.StorageNode{nodeA, nodeB} {
+		for _, node := range []*storagenode2.StorageNode{nodeA, nodeB} {
 			nodeInfo, err := cache.Get(ctx, node.ID())
 			require.NoError(t, err)
 			require.Equal(t, node.Config.Operator.Email, nodeInfo.Operator.Email)

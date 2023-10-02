@@ -5,11 +5,9 @@ package satellite
 
 import (
 	"context"
-	"errors"
 	"net"
 	"runtime/pprof"
 
-	"github.com/spacemonkeygo/monkit/v3"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -93,25 +91,6 @@ func NewAuditor(log *zap.Logger, full *identity.FullIdentity,
 		Services: lifecycle.NewGroup(log.Named("services")),
 	}
 
-	{ // setup debug
-		var err error
-		if config.Debug.Address != "" {
-			peer.Debug.Listener, err = net.Listen("tcp", config.Debug.Address)
-			if err != nil {
-				withoutStack := errors.New(err.Error())
-				peer.Log.Debug("failed to start debug endpoints", zap.Error(withoutStack))
-			}
-		}
-		debugConfig := config.Debug
-		debugConfig.ControlTitle = "Audit"
-		peer.Debug.Server = debug.NewServerWithAtomicLevel(log.Named("debug"), peer.Debug.Listener, monkit.Default, debugConfig, atomicLogLevel)
-		peer.Servers.Add(lifecycle.Item{
-			Name:  "debug",
-			Run:   peer.Debug.Server.Run,
-			Close: peer.Debug.Server.Close,
-		})
-	}
-
 	{ // setup version control
 		peer.Log.Info("Version info",
 			zap.Stringer("Version", versionInfo.Version.Version),
@@ -146,7 +125,7 @@ func NewAuditor(log *zap.Logger, full *identity.FullIdentity,
 
 	{ // setup overlay
 		var err error
-		peer.Overlay, err = overlay.NewService(log.Named("overlay"), overlayCache, nodeEvents, placement.CreateFilters, config.Console.ExternalAddress, config.Console.SatelliteName, config.Overlay)
+		peer.Overlay, err = overlay.NewService(log.Named("overlay"), overlayCache, nodeEvents, placement.CreateFilters, config.Overlay)
 		if err != nil {
 			return nil, errs.Combine(err, peer.Close())
 		}
@@ -246,8 +225,8 @@ func NewAuditor(log *zap.Logger, full *identity.FullIdentity,
 			Run:   peer.Audit.Worker.Run,
 			Close: peer.Audit.Worker.Close,
 		})
-		peer.Debug.Server.Panel.Add(
-			debug.Cycle("Audit Verify Worker", peer.Audit.Worker.Loop))
+		//peer.Debug.Server.Panel.Add(
+		//	debug.Cycle("Audit Verify Worker", peer.Audit.Worker.Loop))
 
 		peer.Audit.ReverifyWorker = audit.NewReverifyWorker(peer.Log.Named("audit:reverify-worker"),
 			reverifyQueue,
@@ -259,8 +238,8 @@ func NewAuditor(log *zap.Logger, full *identity.FullIdentity,
 			Run:   peer.Audit.ReverifyWorker.Run,
 			Close: peer.Audit.ReverifyWorker.Close,
 		})
-		peer.Debug.Server.Panel.Add(
-			debug.Cycle("Audit Reverify Worker", peer.Audit.ReverifyWorker.Loop))
+		//peer.Debug.Server.Panel.Add(
+		//	debug.Cycle("Audit Reverify Worker", peer.Audit.ReverifyWorker.Loop))
 	}
 
 	return peer, nil

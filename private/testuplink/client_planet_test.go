@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"storj.io/storj/private/testplanet/storagenode"
 	"testing"
 	"time"
 
@@ -122,7 +123,7 @@ func testGet(ctx context.Context, t *testing.T, planet *testplanet.Planet, ec ec
 	require.NoError(t, err)
 }
 
-func newAddressedOrderLimit(ctx context.Context, action pb.PieceAction, satellite *testplanet.Satellite, piecePublicKey storj.PiecePublicKey, storageNode *testplanet.StorageNode, pieceID storj.PieceID) (*pb.AddressedOrderLimit, error) {
+func newAddressedOrderLimit(ctx context.Context, action pb.PieceAction, satellite *testplanet.Satellite, piecePublicKey storj.PiecePublicKey, storageNode *storagenode.StorageNode, pieceID storj.PieceID) (*pb.AddressedOrderLimit, error) {
 	// TODO refactor to avoid OrderLimit duplication
 	serialNumber := testrand.SerialNumber()
 

@@ -4,6 +4,7 @@
 package audit_test
 
 import (
+	"storj.io/storj/private/testplanet/storagenode"
 	"testing"
 	"time"
 
@@ -190,7 +191,7 @@ func TestGracefullyExitedNotUpdated(t *testing.T) {
 		containedNode := planet.StorageNodes[2]
 		unknownNode := planet.StorageNodes[3]
 		offlineNode := planet.StorageNodes[4]
-		nodeList := []*testplanet.StorageNode{successNode, failedNode, containedNode, unknownNode, offlineNode}
+		nodeList := []*storagenode.StorageNode{successNode, failedNode, containedNode, unknownNode, offlineNode}
 
 		report := audit.Report{
 			Successes: storj.NodeIDList{successNode.ID(), failedNode.ID(), containedNode.ID(), unknownNode.ID(), offlineNode.ID()},

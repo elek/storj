@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/pprof"
+	"storj.io/storj/satellite/modules"
 	"strconv"
 
 	"github.com/spf13/pflag"
@@ -410,7 +411,6 @@ func (planet *Planet) newSatellite(ctx context.Context, prefix string, index int
 	// in tests due to a prior mismatch between testplanet config and
 	// cfgstruct devDefaults. we need to make sure it's safe to remove
 	// these lines and then remove them.
-	config.Debug.Control = false
 	config.Reputation.AuditHistory.OfflineDQEnabled = false
 	config.Server.Config.Extensions.Revocation = false
 	config.Orders.OrdersSemaphoreSize = 0
@@ -673,7 +673,7 @@ func (planet *Planet) newAPI(ctx context.Context, index int, identity *identity.
 	rollupsWriteCache := orders.NewRollupsWriteCache(log.Named("orders-write-cache"), db.Orders(), config.Orders.FlushBatchSize)
 	planet.databases = append(planet.databases, rollupsWriteCacheCloser{rollupsWriteCache})
 
-	return satellite.NewAPI(log, identity, db, metabaseDB, revocationDB, liveAccounting, rollupsWriteCache, &config, versionInfo, nil)
+	return satellite.NewAPI(log, identity, db, metabaseDB, revocationDB, liveAccounting, rollupsWriteCache, &config, versionInfo, modules.RegisteredServices{})
 }
 
 func (planet *Planet) newUI(ctx context.Context, index int, identity *identity.FullIdentity, config satellite.Config, satelliteAddr, consoleAPIAddr string) (_ *satellite.UI, err error) {

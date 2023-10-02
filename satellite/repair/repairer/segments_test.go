@@ -6,6 +6,7 @@ package repairer_test
 import (
 	"context"
 	"fmt"
+	storagenode2 "storj.io/storj/private/testplanet/storagenode"
 	"testing"
 	"time"
 
@@ -485,7 +486,7 @@ func allPiecesInPlacement(ctx context.Context, overaly *overlay.Service, pieces 
 	return true, nil
 }
 
-func updateNodeStatus(ctx context.Context, satellite *testplanet.Satellite, node *testplanet.StorageNode, offline bool, countryCode location.CountryCode) error {
+func updateNodeStatus(ctx context.Context, satellite *testplanet.Satellite, node *storagenode2.StorageNode, offline bool, countryCode location.CountryCode) error {
 	timestamp := time.Now()
 	if offline {
 		timestamp = time.Now().Add(-4 * time.Hour)

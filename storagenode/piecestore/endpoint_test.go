@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	storagenode2 "storj.io/storj/private/testplanet/storagenode"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -792,7 +793,7 @@ func GenerateOrderLimit(t *testing.T, satellite storj.NodeID, storageNode storj.
 
 // uploadPiece uploads piece to storageNode.
 func uploadPiece(
-	t *testing.T, ctx *testcontext.Context, piece storj.PieceID, storageNode *testplanet.StorageNode,
+	t *testing.T, ctx *testcontext.Context, piece storj.PieceID, storageNode *storagenode2.StorageNode,
 	uplink *testplanet.Uplink, satellite *testplanet.Satellite,
 ) (uploadedData []byte, _ *pb.OrderLimit, _ *pb.PieceHash) {
 	t.Helper()
@@ -828,7 +829,7 @@ func uploadPiece(
 // downloadPiece downlodads piece from storageNode.
 func downloadPiece(
 	t *testing.T, ctx *testcontext.Context, piece storj.PieceID, limit int64,
-	storageNode *testplanet.StorageNode, uplink *testplanet.Uplink, satellite *testplanet.Satellite,
+	storageNode *storagenode2.StorageNode, uplink *testplanet.Uplink, satellite *testplanet.Satellite,
 ) (pieceData []byte, err error) {
 	t.Helper()
 

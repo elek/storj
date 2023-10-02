@@ -44,7 +44,7 @@ type Observer struct {
 // NewObserver creates new tally range loop observer.
 func NewObserver(log *zap.Logger, accounting accounting.StoragenodeAccounting, metabaseDB *metabase.DB) *Observer {
 	return &Observer{
-		log:        log,
+		log:        log.Named("accounting:nodetally"),
 		accounting: accounting,
 		metabaseDB: metabaseDB,
 		nowFn:      time.Now,

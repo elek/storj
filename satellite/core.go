@@ -5,11 +5,9 @@ package satellite
 
 import (
 	"context"
-	"errors"
 	"net"
 	"runtime/pprof"
 
-	"github.com/spacemonkeygo/monkit/v3"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -163,25 +161,6 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 		Services: lifecycle.NewGroup(log.Named("services")),
 	}
 
-	{ // setup debug
-		var err error
-		if config.Debug.Address != "" {
-			peer.Debug.Listener, err = net.Listen("tcp", config.Debug.Address)
-			if err != nil {
-				withoutStack := errors.New(err.Error())
-				peer.Log.Debug("failed to start debug endpoints", zap.Error(withoutStack))
-			}
-		}
-		debugConfig := config.Debug
-		debugConfig.ControlTitle = "Core"
-		peer.Debug.Server = debug.NewServerWithAtomicLevel(log.Named("debug"), peer.Debug.Listener, monkit.Default, debugConfig, atomicLogLevel)
-		peer.Servers.Add(lifecycle.Item{
-			Name:  "debug",
-			Run:   peer.Debug.Server.Run,
-			Close: peer.Debug.Server.Close,
-		})
-	}
-
 	var err error
 
 	{ // setup version control
@@ -255,7 +234,7 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 		}
 
 		peer.Overlay.DB = peer.DB.OverlayCache()
-		peer.Overlay.Service, err = overlay.NewService(peer.Log.Named("overlay"), peer.Overlay.DB, peer.DB.NodeEvents(), placement.CreateFilters, config.Console.ExternalAddress, config.Console.SatelliteName, config.Overlay)
+		peer.Overlay.Service, err = overlay.NewService(peer.Log.Named("overlay"), peer.Overlay.DB, peer.DB.NodeEvents(), placement.CreateFilters, config.Overlay)
 		if err != nil {
 			return nil, errs.Combine(err, peer.Close())
 		}
@@ -272,8 +251,8 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 				Run:   peer.Overlay.OfflineNodeEmails.Run,
 				Close: peer.Overlay.OfflineNodeEmails.Close,
 			})
-			peer.Debug.Server.Panel.Add(
-				debug.Cycle("Overlay Offline Node Emails", peer.Overlay.OfflineNodeEmails.Loop))
+			//peer.Debug.Server.Panel.Add(
+			//	debug.Cycle("Overlay Offline Node Emails", peer.Overlay.OfflineNodeEmails.Loop))
 		}
 
 		if config.StrayNodes.EnableDQ {
@@ -283,8 +262,8 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 				Run:   peer.Overlay.DQStrayNodes.Run,
 				Close: peer.Overlay.DQStrayNodes.Close,
 			})
-			peer.Debug.Server.Panel.Add(
-				debug.Cycle("Overlay DQ Stray Nodes", peer.Overlay.DQStrayNodes.Loop))
+			//peer.Debug.Server.Panel.Add(
+			//	debug.Cycle("Overlay DQ Stray Nodes", peer.Overlay.DQStrayNodes.Loop))
 		}
 	}
 
@@ -355,8 +334,8 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 			Name: "audit:containment-sync-chore",
 			Run:  peer.Audit.ContainmentSyncChore.Run,
 		})
-		peer.Debug.Server.Panel.Add(
-			debug.Cycle("Audit Containment Sync Chore", peer.Audit.ContainmentSyncChore.Loop))
+		//peer.Debug.Server.Panel.Add(
+		//	debug.Cycle("Audit Containment Sync Chore", peer.Audit.ContainmentSyncChore.Loop))
 	}
 
 	{ // setup expired segment cleanup
@@ -370,8 +349,8 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 			Run:   peer.ExpiredDeletion.Chore.Run,
 			Close: peer.ExpiredDeletion.Chore.Close,
 		})
-		peer.Debug.Server.Panel.Add(
-			debug.Cycle("Expired Segments Chore", peer.ExpiredDeletion.Chore.Loop))
+		//peer.Debug.Server.Panel.Add(
+		//	debug.Cycle("Expired Segments Chore", peer.ExpiredDeletion.Chore.Loop))
 	}
 
 	{ // setup zombie objects cleanup
@@ -385,8 +364,8 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 			Run:   peer.ZombieDeletion.Chore.Run,
 			Close: peer.ZombieDeletion.Chore.Close,
 		})
-		peer.Debug.Server.Panel.Add(
-			debug.Cycle("Zombie Objects Chore", peer.ZombieDeletion.Chore.Loop))
+		//peer.Debug.Server.Panel.Add(
+		//	debug.Cycle("Zombie Objects Chore", peer.ZombieDeletion.Chore.Loop))
 	}
 
 	{ // setup accounting
@@ -396,8 +375,8 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 			Run:   peer.Accounting.Tally.Run,
 			Close: peer.Accounting.Tally.Close,
 		})
-		peer.Debug.Server.Panel.Add(
-			debug.Cycle("Accounting Tally", peer.Accounting.Tally.Loop))
+		//peer.Debug.Server.Panel.Add(
+		//	debug.Cycle("Accounting Tally", peer.Accounting.Tally.Loop))
 
 		// Lets add 1 more day so we catch any off by one errors when deleting tallies
 		orderExpirationPlusDay := config.Orders.Expiration + config.Rollup.Interval
@@ -407,8 +386,8 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 			Run:   peer.Accounting.Rollup.Run,
 			Close: peer.Accounting.Rollup.Close,
 		})
-		peer.Debug.Server.Panel.Add(
-			debug.Cycle("Accounting Rollup", peer.Accounting.Rollup.Loop))
+		//peer.Debug.Server.Panel.Add(
+		//	debug.Cycle("Accounting Rollup", peer.Accounting.Rollup.Loop))
 
 		peer.Accounting.ProjectBWCleanupChore = projectbwcleanup.NewChore(peer.Log.Named("accounting:chore"), peer.DB.ProjectAccounting(), config.ProjectBWCleanup)
 		peer.Services.Add(lifecycle.Item{
@@ -416,8 +395,8 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 			Run:   peer.Accounting.ProjectBWCleanupChore.Run,
 			Close: peer.Accounting.ProjectBWCleanupChore.Close,
 		})
-		peer.Debug.Server.Panel.Add(
-			debug.Cycle("Accounting Project Bandwidth Rollup", peer.Accounting.ProjectBWCleanupChore.Loop))
+		//peer.Debug.Server.Panel.Add(
+		//	debug.Cycle("Accounting Project Bandwidth Rollup", peer.Accounting.ProjectBWCleanupChore.Loop))
 
 		if config.RollupArchive.Enabled {
 			peer.Accounting.RollupArchiveChore = rolluparchive.New(peer.Log.Named("accounting:rollup-archive"), peer.DB.StoragenodeAccounting(), peer.DB.ProjectAccounting(), config.RollupArchive)
@@ -426,8 +405,8 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 				Run:   peer.Accounting.RollupArchiveChore.Run,
 				Close: peer.Accounting.RollupArchiveChore.Close,
 			})
-			peer.Debug.Server.Panel.Add(
-				debug.Cycle("Accounting Rollup Archive", peer.Accounting.RollupArchiveChore.Loop))
+			//peer.Debug.Server.Panel.Add(
+			//	debug.Cycle("Accounting Rollup Archive", peer.Accounting.RollupArchiveChore.Loop))
 		} else {
 			peer.Log.Named("rolluparchive").Info("disabled")
 		}
@@ -521,9 +500,9 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 			Name: "payments.storjscan:chore",
 			Run:  peer.Payments.StorjscanChore.Run,
 		})
-		peer.Debug.Server.Panel.Add(
-			debug.Cycle("Payments Storjscan", peer.Payments.StorjscanChore.TransactionCycle),
-		)
+		//peer.Debug.Server.Panel.Add(
+		//	debug.Cycle("Payments Storjscan", peer.Payments.StorjscanChore.TransactionCycle),
+		//)
 
 		choreObservers := billing.ChoreObservers{
 			UpgradeUser: console.NewUpgradeUserObserver(peer.DB.Console(), peer.DB.Billing(), config.Console.UsageLimits, config.Console.UserBalanceForUpgrade),
@@ -603,8 +582,8 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB,
 			Name: "gc-sender",
 			Run:  peer.GarbageCollection.Sender.Run,
 		})
-		peer.Debug.Server.Panel.Add(
-			debug.Cycle("Garbage Collection", peer.GarbageCollection.Sender.Loop))
+		//peer.Debug.Server.Panel.Add(
+		//	debug.Cycle("Garbage Collection", peer.GarbageCollection.Sender.Loop))
 	}
 
 	return peer, nil

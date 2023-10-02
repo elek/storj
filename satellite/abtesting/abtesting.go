@@ -1,32 +1,33 @@
 // Copyright (C) 2022 Storj Labs, Inc.
 // See LICENSE for copying information.
 
-package consoleapi
+package abtesting
 
 import (
 	"encoding/json"
-	"net/http"
-
 	"github.com/gorilla/mux"
+	"github.com/spacemonkeygo/monkit/v3"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
+	"net/http"
 
 	"storj.io/storj/private/web"
-	"storj.io/storj/satellite/abtesting"
 	"storj.io/storj/satellite/console"
 )
 
 // ErrABAPI - console ab testing api error type.
 var ErrABAPI = errs.Class("consoleapi ab testing error")
 
+var mon = monkit.Package()
+
 // ABTesting is an api controller that exposes all ab testing functionality.
 type ABTesting struct {
 	log     *zap.Logger
-	service abtesting.ABService
+	service ABService
 }
 
 // NewABTesting is a constructor for AB testing controller.
-func NewABTesting(log *zap.Logger, service abtesting.ABService) *ABTesting {
+func NewABTesting(log *zap.Logger, service ABService) *ABTesting {
 	return &ABTesting{
 		log:     log,
 		service: service,

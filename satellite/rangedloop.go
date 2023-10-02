@@ -5,11 +5,9 @@ package satellite
 
 import (
 	"context"
-	"errors"
 	"net"
 	"runtime/pprof"
 
-	"github.com/spacemonkeygo/monkit/v3"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -17,12 +15,9 @@ import (
 	"storj.io/private/debug"
 	"storj.io/storj/private/lifecycle"
 	"storj.io/storj/satellite/accounting/nodetally"
-	"storj.io/storj/satellite/audit"
 	"storj.io/storj/satellite/gc/piecetracker"
-	"storj.io/storj/satellite/gracefulexit"
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/metabase/rangedloop"
-	"storj.io/storj/satellite/metrics"
 	"storj.io/storj/satellite/overlay"
 	"storj.io/storj/satellite/repair/checker"
 )
@@ -75,6 +70,18 @@ type RangedLoop struct {
 	}
 }
 
+//
+//func setupRepair(config Config) {
+//	placement, err := config.Placement.Parse()
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	if len(config.Checker.RepairExcludedCountryCodes) == 0 {
+//		config.Checker.RepairExcludedCountryCodes = config.Overlay.RepairExcludedCountryCodes
+//	}
+//}
+
 // NewRangedLoop creates a new satellite ranged loop process.
 func NewRangedLoop(log *zap.Logger, db DB, metabaseDB *metabase.DB, config *Config, atomicLogLevel *zap.AtomicLevel) (_ *RangedLoop, err error) {
 	peer := &RangedLoop{
@@ -85,68 +92,13 @@ func NewRangedLoop(log *zap.Logger, db DB, metabaseDB *metabase.DB, config *Conf
 		Services: lifecycle.NewGroup(log.Named("services")),
 	}
 
-	{ // setup debug
-		var err error
-		if config.Debug.Address != "" {
-			peer.Debug.Listener, err = net.Listen("tcp", config.Debug.Address)
-			if err != nil {
-				withoutStack := errors.New(err.Error())
-				peer.Log.Debug("failed to start debug endpoints", zap.Error(withoutStack))
-			}
-		}
-		debugConfig := config.Debug
-		debugConfig.ControlTitle = "RangedLoop"
-		peer.Debug.Server = debug.NewServerWithAtomicLevel(log.Named("debug"), peer.Debug.Listener, monkit.Default, debugConfig, atomicLogLevel)
-		peer.Servers.Add(lifecycle.Item{
-			Name:  "debug",
-			Run:   peer.Debug.Server.Run,
-			Close: peer.Debug.Server.Close,
-		})
-	}
-
-	{ // setup audit observer
-		peer.Audit.Observer = audit.NewObserver(log.Named("audit"), db.VerifyQueue(), config.Audit)
-	}
-
-	{ // setup metrics observer
-		peer.Metrics.Observer = metrics.NewObserver()
-	}
-
-	{ // setup gracefulexit
-		if config.GracefulExit.Enabled && !config.GracefulExit.TimeBased {
-			peer.GracefulExit.Observer = gracefulexit.NewObserver(
-				peer.Log.Named("gracefulexit:observer"),
-				peer.DB.GracefulExit(),
-				peer.DB.OverlayCache(),
-				metabaseDB,
-				config.GracefulExit,
-			)
-		}
-	}
-
-	{ // setup node tally observer
-		peer.Accounting.NodeTallyObserver = nodetally.NewObserver(
-			log.Named("accounting:nodetally"),
-			db.StoragenodeAccounting(),
-			metabaseDB)
-	}
-
-	{ // setup piece tracker observer
-		peer.PieceTracker.Observer = piecetracker.NewObserver(
-			log.Named("piecetracker"),
-			metabaseDB,
-			peer.DB.OverlayCache(),
-			config.PieceTracker,
-		)
-	}
-
 	{ // setup overlay
 		placement, err := config.Placement.Parse()
 		if err != nil {
 			return nil, err
 		}
 
-		peer.Overlay.Service, err = overlay.NewService(peer.Log.Named("overlay"), peer.DB.OverlayCache(), peer.DB.NodeEvents(), placement.CreateFilters, config.Console.ExternalAddress, config.Console.SatelliteName, config.Overlay)
+		peer.Overlay.Service, err = overlay.NewService(peer.Log.Named("overlay"), peer.DB.OverlayCache(), peer.DB.NodeEvents(), placement.CreateFilters, config.Overlay)
 		if err != nil {
 			return nil, errs.Combine(err, peer.Close())
 		}
@@ -154,60 +106,6 @@ func NewRangedLoop(log *zap.Logger, db DB, metabaseDB *metabase.DB, config *Conf
 			Name:  "overlay",
 			Run:   peer.Overlay.Service.Run,
 			Close: peer.Overlay.Service.Close,
-		})
-	}
-
-	{ // setup repair
-		placement, err := config.Placement.Parse()
-		if err != nil {
-			return nil, err
-		}
-
-		if len(config.Checker.RepairExcludedCountryCodes) == 0 {
-			config.Checker.RepairExcludedCountryCodes = config.Overlay.RepairExcludedCountryCodes
-		}
-
-		peer.Repair.Observer = checker.NewObserver(
-			peer.Log.Named("repair:checker"),
-			peer.DB.RepairQueue(),
-			peer.Overlay.Service,
-			placement.CreateFilters,
-			config.Checker,
-		)
-	}
-
-	{ // setup ranged loop
-		observers := []rangedloop.Observer{
-			rangedloop.NewLiveCountObserver(metabaseDB, config.RangedLoop.SuspiciousProcessedRatio, config.RangedLoop.AsOfSystemInterval),
-			peer.Metrics.Observer,
-		}
-
-		if config.Audit.UseRangedLoop {
-			observers = append(observers, peer.Audit.Observer)
-		}
-
-		if config.Tally.UseRangedLoop {
-			observers = append(observers, peer.Accounting.NodeTallyObserver)
-		}
-
-		if peer.GracefulExit.Observer != nil && config.GracefulExit.UseRangedLoop {
-			observers = append(observers, peer.GracefulExit.Observer)
-		}
-
-		if config.Repairer.UseRangedLoop {
-			observers = append(observers, peer.Repair.Observer)
-		}
-
-		if config.PieceTracker.UseRangedLoop {
-			observers = append(observers, peer.PieceTracker.Observer)
-		}
-
-		segments := rangedloop.NewMetabaseRangeSplitter(metabaseDB, config.RangedLoop.AsOfSystemInterval, config.RangedLoop.BatchSize)
-		peer.RangedLoop.Service = rangedloop.NewService(log.Named("rangedloop"), config.RangedLoop, segments, observers)
-
-		peer.Services.Add(lifecycle.Item{
-			Name: "rangeloop",
-			Run:  peer.RangedLoop.Service.Run,
 		})
 	}
 

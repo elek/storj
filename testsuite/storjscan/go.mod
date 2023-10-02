@@ -7,7 +7,7 @@ replace storj.io/storj => ../../
 require (
 	github.com/stretchr/testify v1.8.4
 	github.com/zeebo/errs v1.3.0
-	go.uber.org/zap v1.21.0
+	go.uber.org/zap v1.26.0
 	golang.org/x/sync v0.3.0
 	storj.io/common v0.0.0-20230915121338-2eb36f9fcdbb
 	storj.io/private v0.0.0-20230912093002-ca2d4ab44679
@@ -141,7 +141,7 @@ require (
 	github.com/zyedidia/generic v1.2.1 // indirect
 	go.etcd.io/bbolt v1.3.5 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
-	go.uber.org/multierr v1.6.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db // indirect
 	golang.org/x/mod v0.10.0 // indirect
@@ -158,6 +158,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	storj.io/drpc v0.0.33 // indirect
-	storj.io/monkit-jaeger v0.0.0-20220915074555-d100d7589f41 // indirect
+	storj.io/monkit-jaeger v0.0.0-20230707083646-f15e6e8b7e8c // indirect
 	storj.io/picobuf v0.0.2-0.20230906122608-c4ba17033c6c // indirect
 )

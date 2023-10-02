@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"net"
+	storagenode2 "storj.io/storj/private/testplanet/storagenode"
 	"testing"
 	"time"
 
@@ -1817,7 +1818,7 @@ func TestIrreparableSegmentNodesOffline(t *testing.T) {
 	})
 }
 
-func updateNodeCheckIn(ctx context.Context, overlayDB overlay.DB, node *testplanet.StorageNode, isUp bool, timestamp time.Time) error {
+func updateNodeCheckIn(ctx context.Context, overlayDB overlay.DB, node *storagenode2.StorageNode, isUp bool, timestamp time.Time) error {
 	local := node.Contact.Service.Local()
 	checkInInfo := overlay.NodeCheckInInfo{
 		NodeID: node.ID(),
@@ -2383,7 +2384,7 @@ func getRemoteSegment(
 }
 
 // corruptPieceData manipulates piece data on a storage node.
-func corruptPieceData(ctx context.Context, t *testing.T, planet *testplanet.Planet, corruptedNode *testplanet.StorageNode, corruptedPieceID storj.PieceID) {
+func corruptPieceData(ctx context.Context, t *testing.T, planet *testplanet.Planet, corruptedNode *storagenode2.StorageNode, corruptedPieceID storj.PieceID) {
 	t.Helper()
 
 	blobRef := blobstore.BlobRef{

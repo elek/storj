@@ -5,6 +5,7 @@ package accounting_test
 
 import (
 	"context"
+	"storj.io/storj/private/testplanet/storagenode"
 	"testing"
 	"time"
 
@@ -253,7 +254,7 @@ func TestBilling_AuditRepairTraffic(t *testing.T) {
 		err = planet.StopNodeAndUpdate(ctx, planet.FindNode(stoppedNodeID))
 		require.NoError(t, err)
 
-		runningNodes := make([]*testplanet.StorageNode, 0)
+		runningNodes := make([]*storagenode.StorageNode, 0)
 		for _, node := range planet.StorageNodes {
 			if node.ID() != stoppedNodeID {
 				runningNodes = append(runningNodes, node)
@@ -441,7 +442,7 @@ func getProjectTotal(
 // to storageNodes nodes.
 func getProjectTotalFromStorageNodes(
 	ctx context.Context, t *testing.T, planet *testplanet.Planet, satelliteIdx int,
-	projectID uuid.UUID, since time.Time, storageNodes []*testplanet.StorageNode,
+	projectID uuid.UUID, since time.Time, storageNodes []*storagenode.StorageNode,
 ) *accounting.ProjectUsage {
 	t.Helper()
 

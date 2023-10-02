@@ -5,6 +5,7 @@ package gracefulexit_test
 
 import (
 	"math/rand"
+	"storj.io/storj/private/testplanet/storagenode"
 	"testing"
 	"time"
 
@@ -186,7 +187,7 @@ func TestGracefulExit_DeleteAllFinishedTransferQueueItems(t *testing.T) {
 
 		queueItemsPerNode := 500
 		// Add some items to the transfer queue for the exited nodes
-		queueItems, nodesItems := generateTransferQueueItems(t, queueItemsPerNode, []*testplanet.StorageNode{
+		queueItems, nodesItems := generateTransferQueueItems(t, queueItemsPerNode, []*storagenode.StorageNode{
 			nodeSuccessful1, nodeSuccessful2, nodeSuccessful3, nodeFailed1, nodeFailed2,
 		})
 
@@ -521,7 +522,7 @@ func TestGracefulExit_DeleteAllFinishedTransferQueueItems_batch(t *testing.T) {
 
 // generateTransferQueueItems generates a random number of transfer queue items,
 // between 10 and 120, for each passed node.
-func generateTransferQueueItems(t *testing.T, itemsPerNode int, nodes []*testplanet.StorageNode) ([]gracefulexit.TransferQueueItem, map[storj.NodeID]int64) {
+func generateTransferQueueItems(t *testing.T, itemsPerNode int, nodes []*storagenode.StorageNode) ([]gracefulexit.TransferQueueItem, map[storj.NodeID]int64) {
 	nodeIDs := make([]storj.NodeID, len(nodes))
 	for i, n := range nodes {
 		nodeIDs[i] = n.ID()

@@ -62,7 +62,7 @@ func NewObserver(logger *zap.Logger, repairQueue queue.RepairQueue, overlay *ove
 	}
 
 	return &Observer{
-		logger: logger,
+		logger: logger.Named("repair:checker"),
 
 		repairQueue:          repairQueue,
 		nodesCache:           NewReliabilityCache(overlay, config.ReliabilityCacheStaleness),

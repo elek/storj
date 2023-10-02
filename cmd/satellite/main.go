@@ -10,6 +10,7 @@ import (
 	mathrand "math/rand"
 	"os"
 	"path/filepath"
+	"storj.io/storj/satellite/modules"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -419,6 +420,9 @@ func init() {
 	process.Bind(runCmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
 	process.Bind(runMigrationCmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
 	process.Bind(runAPICmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
+	for _, config := range modules.DynamicConfigs {
+		config(runAPICmd, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
+	}
 	process.Bind(runUICmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
 	process.Bind(runAdminCmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
 	process.Bind(runRepairerCmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
@@ -426,6 +430,9 @@ func init() {
 	process.Bind(runGCCmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
 	process.Bind(runGCBloomFilterCmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
 	process.Bind(runRangedLoopCmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
+	for _, config := range modules.DynamicConfigs {
+		config(runRangedLoopCmd, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
+	}
 	process.Bind(restoreTrashCmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
 	process.Bind(registerLostSegments, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
 	process.Bind(fetchPiecesCmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
@@ -453,7 +460,6 @@ func init() {
 	process.Bind(stripeCustomerCmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
 	process.Bind(consistencyGECleanupCmd, &consistencyGECleanupCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
 	process.Bind(fixLastNetsCmd, &runCfg, defaults, cfgstruct.ConfDir(confDir), cfgstruct.IdentityDir(identityDir))
-
 	if err := consistencyGECleanupCmd.MarkFlagRequired("before"); err != nil {
 		panic(err)
 	}
@@ -464,8 +470,6 @@ func cmdRun(cmd *cobra.Command, args []string) (err error) {
 
 	ctx, _ := process.Ctx(cmd)
 	log := zap.L()
-
-	runCfg.Debug.Address = *process.DebugAddrFlag
 
 	identity, err := runCfg.Identity.Load()
 	if err != nil {

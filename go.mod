@@ -50,7 +50,7 @@ require (
 	github.com/zeebo/structs v1.0.3-0.20230601144555-f2db46069602
 	github.com/zyedidia/generic v1.2.1
 	go.etcd.io/bbolt v1.3.5
-	go.uber.org/zap v1.16.0
+	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.12.0
 	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db
 	golang.org/x/net v0.10.0
@@ -130,7 +130,9 @@ require (
 	github.com/zeebo/mwc v0.0.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
-	go.uber.org/multierr v1.6.0 // indirect
+	go.uber.org/dig v1.17.0 // indirect
+	go.uber.org/fx v1.20.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/tools v0.9.1 // indirect
 	google.golang.org/api v0.118.0 // indirect
@@ -142,3 +144,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	storj.io/picobuf v0.0.2-0.20230906122608-c4ba17033c6c // indirect
 )
+
+replace storj.io/private => ../../jr/private

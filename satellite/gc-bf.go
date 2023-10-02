@@ -5,11 +5,9 @@ package satellite
 
 import (
 	"context"
-	"errors"
 	"net"
 	"runtime/pprof"
 
-	"github.com/spacemonkeygo/monkit/v3"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -63,58 +61,39 @@ func NewGarbageCollectionBF(log *zap.Logger, db DB, metabaseDB *metabase.DB, rev
 		Services: lifecycle.NewGroup(log.Named("services")),
 	}
 
-	{ // setup debug
-		var err error
-		if config.Debug.Address != "" {
-			peer.Debug.Listener, err = net.Listen("tcp", config.Debug.Address)
-			if err != nil {
-				withoutStack := errors.New(err.Error())
-				peer.Log.Debug("failed to start debug endpoints", zap.Error(withoutStack))
-			}
-		}
-		debugConfig := config.Debug
-		debugConfig.ControlTitle = "GC-BloomFilter"
-		peer.Debug.Server = debug.NewServerWithAtomicLevel(log.Named("debug"), peer.Debug.Listener, monkit.Default, debugConfig, atomicLogLevel)
-		peer.Servers.Add(lifecycle.Item{
-			Name:  "debug",
-			Run:   peer.Debug.Server.Run,
-			Close: peer.Debug.Server.Close,
-		})
-	}
-
 	{ // setup overlay
 		peer.Overlay.DB = peer.DB.OverlayCache()
 	}
 
 	{ // setup garbage collection bloom filters
-		log := peer.Log.Named("garbage-collection-bf")
-		peer.GarbageCollection.Config = config.GarbageCollectionBF
+		//log := peer.Log.Named("garbage-collection-bf")
+		//peer.GarbageCollection.Config = config.GarbageCollectionBF
 
-		var observer rangedloop.Observer
-		if config.GarbageCollectionBF.UseSyncObserver {
-			observer = bloomfilter.NewSyncObserver(log.Named("gc-bf"),
-				config.GarbageCollectionBF,
-				peer.Overlay.DB,
-			)
-		} else {
-			observer = bloomfilter.NewObserver(log.Named("gc-bf"),
-				config.GarbageCollectionBF,
-				peer.Overlay.DB,
-			)
-		}
+		//var observer rangedloop.Observer
+		//if config.GarbageCollectionBF.UseSyncObserver {
+		//	observer = bloomfilter.NewSyncObserver(log.Named("gc-bf"),
+		//		config.GarbageCollectionBF,
+		//		peer.Overlay.DB,
+		//	)
+		//} else {
+		//	observer = bloomfilter.NewObserver(log.Named("gc-bf"),
+		//		config.GarbageCollectionBF,
+		//		peer.Overlay.DB,
+		//	)
+		//}
 
-		provider := rangedloop.NewMetabaseRangeSplitter(metabaseDB, config.RangedLoop.AsOfSystemInterval, config.RangedLoop.BatchSize)
-		peer.RangedLoop.Service = rangedloop.NewService(log.Named("rangedloop"), config.RangedLoop, provider, []rangedloop.Observer{observer})
-
-		if !config.GarbageCollectionBF.RunOnce {
-			peer.Services.Add(lifecycle.Item{
-				Name:  "garbage-collection-bf",
-				Run:   peer.RangedLoop.Service.Run,
-				Close: peer.RangedLoop.Service.Close,
-			})
-			peer.Debug.Server.Panel.Add(
-				debug.Cycle("Garbage Collection Bloom Filters", peer.RangedLoop.Service.Loop))
-		}
+		//provider := rangedloop.NewMetabaseRangeSplitter(metabaseDB, config.RangedLoop.AsOfSystemInterval, config.RangedLoop.BatchSize)
+		//peer.RangedLoop.Service = rangedloop.NewService(log.Named("rangedloop"), config.RangedLoop, provider, []rangedloop.Observer{observer})
+		//
+		//if !config.GarbageCollectionBF.RunOnce {
+		//	peer.Services.Add(lifecycle.Item{
+		//		Name:  "garbage-collection-bf",
+		//		Run:   peer.RangedLoop.Service.Run,
+		//		Close: peer.RangedLoop.Service.Close,
+		//	})
+		//	//peer.Debug.Server.Panel.Add(
+		//	//	debug.Cycle("Garbage Collection Bloom Filters", peer.RangedLoop.Service.Loop))
+		//}
 	}
 
 	return peer, nil

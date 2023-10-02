@@ -311,7 +311,7 @@ type Service struct {
 type LastNetFunc func(config NodeSelectionConfig, ip net.IP, port string) (string, error)
 
 // NewService returns a new Service.
-func NewService(log *zap.Logger, db DB, nodeEvents nodeevents.DB, placementRules PlacementRules, satelliteAddr, satelliteName string, config Config) (*Service, error) {
+func NewService(log *zap.Logger, db DB, nodeEvents nodeevents.DB, placementRules PlacementRules, config Config) (*Service, error) {
 	err := config.Node.AsOfSystemTime.isValid()
 	if err != nil {
 		return nil, errs.Wrap(err)
@@ -358,12 +358,10 @@ func NewService(log *zap.Logger, db DB, nodeEvents nodeevents.DB, placementRules
 	}
 
 	return &Service{
-		log:              log,
-		db:               db,
-		nodeEvents:       nodeEvents,
-		satelliteAddress: satelliteAddr,
-		satelliteName:    satelliteName,
-		config:           config,
+		log:        log,
+		db:         db,
+		nodeEvents: nodeEvents,
+		config:     config,
 
 		GeoIP: geoIP,
 

@@ -43,7 +43,7 @@ type Observer struct {
 // NewObserver creates new piecetracker ranged loop observer.
 func NewObserver(log *zap.Logger, metabaseDB *metabase.DB, overlay overlay.DB, config Config) *Observer {
 	return &Observer{
-		log:         log,
+		log:         log.Named("piecetracker"),
 		overlay:     overlay,
 		metabaseDB:  metabaseDB,
 		config:      config,

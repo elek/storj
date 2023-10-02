@@ -34,6 +34,7 @@ var _ rangedloop.Partial = (*observerFork)(nil)
 
 // NewObserver instantiates Observer.
 func NewObserver(log *zap.Logger, queue VerifyQueue, config Config) *Observer {
+	log = log.Named("audit")
 	if config.VerificationPushBatchSize < 1 {
 		config.VerificationPushBatchSize = 1
 	}
