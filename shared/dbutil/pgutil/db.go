@@ -13,9 +13,9 @@ import (
 	"github.com/zeebo/errs"
 
 	"storj.io/common/context2"
-	"storj.io/private/dbutil"
-	"storj.io/private/dbutil/dbschema"
-	"storj.io/private/tagsql"
+	"storj.io/storj/shared/dbutil"
+	"storj.io/storj/shared/dbutil/dbschema"
+	"storj.io/storj/shared/tagsql"
 )
 
 var (
@@ -24,7 +24,7 @@ var (
 
 // OpenUnique opens a postgres database with a temporary unique schema, which will be cleaned up
 // when closed. It is expected that this should normally be used by way of
-// "storj.io/private/dbutil/tempdb".OpenUnique() instead of calling it directly.
+// "storj.io/storj/shared/dbutil/tempdb".OpenUnique() instead of calling it directly.
 func OpenUnique(ctx context.Context, connstr string, schemaPrefix string) (*dbutil.TempDatabase, error) {
 	// sanity check, because you get an unhelpful error message when this happens
 	if strings.HasPrefix(connstr, "cockroach://") {

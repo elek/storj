@@ -12,7 +12,7 @@ import (
 
 	"github.com/zeebo/errs"
 
-	"storj.io/private/dbutil/dbschema"
+	"storj.io/storj/shared/dbutil/dbschema"
 )
 
 type definition struct {

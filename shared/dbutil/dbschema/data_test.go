@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"storj.io/private/dbutil/dbschema"
+	"storj.io/storj/shared/dbutil/dbschema"
 )
 
 func TestValidateColumnName(t *testing.T) {

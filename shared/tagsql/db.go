@@ -20,7 +20,7 @@ import (
 
 	"storj.io/common/context2"
 	"storj.io/common/leak"
-	"storj.io/private/traces"
+	"storj.io/storj/shared/traces"
 )
 
 var mon = monkit.Package()

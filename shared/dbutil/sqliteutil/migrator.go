@@ -11,8 +11,8 @@ import (
 	"github.com/mattn/go-sqlite3"
 	"github.com/zeebo/errs"
 
-	"storj.io/private/dbutil/txutil"
-	"storj.io/private/tagsql"
+	"storj.io/storj/shared/dbutil/txutil"
+	"storj.io/storj/shared/tagsql"
 )
 
 var (

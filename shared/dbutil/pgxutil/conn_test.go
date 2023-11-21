@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"storj.io/common/testcontext"
-	"storj.io/private/dbutil/pgtest"
-	"storj.io/private/dbutil/pgxutil"
-	"storj.io/private/dbutil/tempdb"
+	"storj.io/storj/shared/dbutil/pgtest"
+	"storj.io/storj/shared/dbutil/pgxutil"
+	"storj.io/storj/shared/dbutil/tempdb"
 )
 
 func TestConn(t *testing.T) {

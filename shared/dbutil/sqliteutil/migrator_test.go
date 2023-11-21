@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"storj.io/common/testcontext"
-	"storj.io/private/dbutil/sqliteutil"
-	"storj.io/private/tagsql"
+	"storj.io/storj/shared/dbutil/sqliteutil"
+	"storj.io/storj/shared/tagsql"
 )
 
 func TestMigrateTablesToDatabase(t *testing.T) {

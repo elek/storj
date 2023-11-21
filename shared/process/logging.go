@@ -16,8 +16,8 @@ import (
 	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
 
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process/gcloudlogging"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process/gcloudlogging"
 )
 
 var (

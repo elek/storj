@@ -20,9 +20,9 @@ import (
 
 	"storj.io/common/identity"
 	"storj.io/common/telemetry"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/debug"
-	"storj.io/private/version"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/debug"
+	"storj.io/storj/shared/version"
 )
 
 var (

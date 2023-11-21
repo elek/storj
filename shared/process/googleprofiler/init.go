@@ -11,8 +11,8 @@ import (
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 
-	"storj.io/private/process"
-	"storj.io/private/version"
+	"storj.io/storj/shared/process"
+	"storj.io/storj/shared/version"
 )
 
 var (
