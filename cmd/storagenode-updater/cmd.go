@@ -18,11 +18,11 @@ import (
 	"storj.io/common/identity"
 	"storj.io/common/storj"
 	"storj.io/common/sync2"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process"
-	"storj.io/private/version"
 	_ "storj.io/storj/private/version" // This attaches version information during release builds.
 	"storj.io/storj/private/version/checker"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process"
+	"storj.io/storj/shared/version"
 )
 
 const (

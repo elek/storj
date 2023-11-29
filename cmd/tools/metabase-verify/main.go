@@ -8,9 +8,9 @@ import (
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 
-	"storj.io/private/process"
 	"storj.io/storj/cmd/tools/metabase-verify/verify"
 	"storj.io/storj/satellite/metabase"
+	"storj.io/storj/shared/process"
 )
 
 // Error is the default error class for the package.

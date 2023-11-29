@@ -15,10 +15,10 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/storj"
-	"storj.io/private/debug"
 	"storj.io/storj/multinode"
 	"storj.io/storj/multinode/console/server"
 	"storj.io/storj/multinode/multinodedb"
+	"storj.io/storj/shared/debug"
 )
 
 // Multinode contains all the processes needed to run a full multinode setup.

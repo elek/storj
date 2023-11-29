@@ -11,8 +11,8 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/storj"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process"
 	"storj.io/storj/storagenode"
 	"storj.io/storj/storagenode/pieces"
 	"storj.io/storj/storagenode/satellites"

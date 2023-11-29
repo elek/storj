@@ -8,10 +8,10 @@ import (
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process"
-	"storj.io/private/version"
 	"storj.io/storj/private/revocation"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process"
+	"storj.io/storj/shared/version"
 	"storj.io/storj/storagenode"
 	"storj.io/storj/storagenode/storagenodedb"
 )

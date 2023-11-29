@@ -22,9 +22,9 @@ import (
 	"storj.io/common/peertls"
 	"storj.io/common/pkcrypto"
 	"storj.io/common/storj"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process"
 	"storj.io/storj/private/cui"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process"
 )
 
 var (

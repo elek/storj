@@ -31,10 +31,10 @@ import (
 	"storj.io/gateway-mt/pkg/authclient"
 	"storj.io/gateway-mt/pkg/server"
 	"storj.io/gateway-mt/pkg/trustedip"
-	"storj.io/private/cfgstruct"
 	"storj.io/storj/cmd/uplink/cmd"
 	"storj.io/storj/private/testplanet"
 	"storj.io/storj/satellite"
+	"storj.io/storj/shared/cfgstruct"
 )
 
 // EdgePlanet contains defaults for testplanet with Edge.

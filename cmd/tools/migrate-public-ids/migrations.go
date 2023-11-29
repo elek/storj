@@ -11,8 +11,8 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/uuid"
-	"storj.io/private/dbutil/cockroachutil"
-	"storj.io/private/dbutil/pgutil"
+	"storj.io/storj/shared/dbutil/cockroachutil"
+	"storj.io/storj/shared/dbutil/pgutil"
 )
 
 // MigrateProjects updates all rows in the projects table, giving them a new UUID if they do not already have one.

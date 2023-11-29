@@ -13,11 +13,11 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/uuid"
-	"storj.io/private/process"
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/nodeselection"
 	"storj.io/storj/satellite/overlay"
 	"storj.io/storj/satellite/satellitedb"
+	"storj.io/storj/shared/process"
 )
 
 func verifySegmentsNodeCheck(cmd *cobra.Command, args []string) error {

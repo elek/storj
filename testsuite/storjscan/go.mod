@@ -10,7 +10,6 @@ require (
 	go.uber.org/zap v1.21.0
 	golang.org/x/sync v0.3.0
 	storj.io/common v0.0.0-20231122072641-db87695ccc58
-	storj.io/private v0.0.0-20231127092015-c439a594bc1d
 	storj.io/storj v1.63.1
 	storj.io/storjscan v0.0.0-20220926140643-1623c3b391b0
 	storj.io/uplink v1.12.3-0.20231122160004-e620b33019eb
@@ -167,4 +166,5 @@ require (
 	storj.io/infectious v0.0.2 // indirect
 	storj.io/monkit-jaeger v0.0.0-20230707083646-f15e6e8b7e8c // indirect
 	storj.io/picobuf v0.0.2-0.20230906122608-c4ba17033c6c // indirect
+	storj.io/private v0.0.0-20231127092015-c439a594bc1d // indirect
 )

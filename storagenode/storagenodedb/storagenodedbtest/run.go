@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap/zaptest"
 
 	"storj.io/common/testcontext"
-	"storj.io/private/dbutil/utccheck"
+	"storj.io/storj/shared/dbutil/utccheck"
 	"storj.io/storj/storagenode"
 	"storj.io/storj/storagenode/storagenodedb"
 )

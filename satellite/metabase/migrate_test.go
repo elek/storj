@@ -12,10 +12,10 @@ import (
 	"go.uber.org/zap/zaptest"
 
 	"storj.io/common/testcontext"
-	"storj.io/private/dbutil/dbschema"
-	"storj.io/private/dbutil/pgutil"
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/satellitedb/satellitedbtest"
+	"storj.io/storj/shared/dbutil/dbschema"
+	"storj.io/storj/shared/dbutil/pgutil"
 )
 
 func TestMigration(t *testing.T) {

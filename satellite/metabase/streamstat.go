@@ -10,7 +10,7 @@ import (
 
 	"storj.io/common/storj"
 	"storj.io/common/uuid"
-	"storj.io/private/tagsql"
+	"storj.io/storj/shared/tagsql"
 )
 
 // GetStreamPieceCountByNodeID contains arguments for GetStreamPieceCountByNodeID.

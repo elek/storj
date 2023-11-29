@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/bloomfilter"
-	"storj.io/private/process"
+	"storj.io/storj/shared/process"
 	"storj.io/storj/storagenode/iopriority"
 	"storj.io/storj/storagenode/pieces"
 	"storj.io/storj/storagenode/pieces/lazyfilewalker"

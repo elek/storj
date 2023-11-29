@@ -8,10 +8,10 @@ import (
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 
-	"storj.io/private/process"
 	"storj.io/storj/satellite"
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/satellitedb"
+	"storj.io/storj/shared/process"
 )
 
 func cmdRangedLoopRun(cmd *cobra.Command, args []string) (err error) {

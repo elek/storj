@@ -27,10 +27,10 @@ import (
 	"storj.io/common/testcontext"
 	"storj.io/common/testrand"
 	"storj.io/common/uuid"
-	"storj.io/private/dbutil/cockroachutil"
-	"storj.io/private/tagsql"
 	"storj.io/storj/private/testplanet"
 	"storj.io/storj/satellite/metabase"
+	"storj.io/storj/shared/dbutil/cockroachutil"
+	"storj.io/storj/shared/tagsql"
 	"storj.io/storj/storagenode/pieces"
 )
 

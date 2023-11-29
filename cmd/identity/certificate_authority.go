@@ -13,9 +13,9 @@ import (
 
 	"storj.io/common/identity"
 	"storj.io/common/peertls/extensions"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process"
 	"storj.io/storj/private/revocation"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process"
 )
 
 var (

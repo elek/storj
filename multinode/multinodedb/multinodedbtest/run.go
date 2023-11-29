@@ -15,13 +15,13 @@ import (
 	"go.uber.org/zap/zaptest"
 
 	"storj.io/common/testcontext"
-	"storj.io/private/dbutil"
-	"storj.io/private/dbutil/pgtest"
-	"storj.io/private/dbutil/pgutil"
-	"storj.io/private/dbutil/tempdb"
 	"storj.io/storj/multinode"
 	"storj.io/storj/multinode/multinodedb"
 	"storj.io/storj/multinode/multinodedb/dbx"
+	"storj.io/storj/shared/dbutil"
+	"storj.io/storj/shared/dbutil/pgtest"
+	"storj.io/storj/shared/dbutil/pgutil"
+	"storj.io/storj/shared/dbutil/tempdb"
 )
 
 // Database describes a test database.

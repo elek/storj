@@ -14,9 +14,9 @@ import (
 
 	"storj.io/common/currency"
 	"storj.io/common/uuid"
-	"storj.io/private/dbutil/pgutil/pgerrcode"
 	"storj.io/storj/satellite/payments/billing"
 	"storj.io/storj/satellite/satellitedb/dbx"
+	"storj.io/storj/shared/dbutil/pgutil/pgerrcode"
 )
 
 // ensures that *billingDB implements billing.TransactionsDB.

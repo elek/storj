@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"storj.io/common/testcontext"
-	"storj.io/private/version"
 	"storj.io/storj/private/testplanet"
+	"storj.io/storj/shared/version"
 	"storj.io/storj/storagenode/notifications"
 	"storj.io/storj/versioncontrol"
 )

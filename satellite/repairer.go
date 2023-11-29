@@ -20,8 +20,6 @@ import (
 	"storj.io/common/rpc"
 	"storj.io/common/signing"
 	"storj.io/common/storj"
-	"storj.io/private/debug"
-	"storj.io/private/version"
 	"storj.io/storj/private/lifecycle"
 	version_checker "storj.io/storj/private/version/checker"
 	"storj.io/storj/satellite/audit"
@@ -33,6 +31,8 @@ import (
 	"storj.io/storj/satellite/repair/queue"
 	"storj.io/storj/satellite/repair/repairer"
 	"storj.io/storj/satellite/reputation"
+	"storj.io/storj/shared/debug"
+	"storj.io/storj/shared/version"
 )
 
 // Repairer is the repairer process.

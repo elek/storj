@@ -8,8 +8,8 @@ import (
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 
-	"storj.io/private/process"
 	"storj.io/storj/satellite"
+	"storj.io/storj/shared/process"
 )
 
 func cmdUIRun(cmd *cobra.Command, args []string) (err error) {

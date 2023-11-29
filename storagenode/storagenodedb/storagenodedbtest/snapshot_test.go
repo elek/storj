@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap/zaptest"
 
 	"storj.io/common/testcontext"
-	"storj.io/private/tagsql"
+	"storj.io/storj/shared/tagsql"
 	"storj.io/storj/storagenode/blobstore/filestore"
 	"storj.io/storj/storagenode/storagenodedb"
 )

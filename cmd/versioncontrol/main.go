@@ -12,9 +12,9 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/fpath"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process"
 	_ "storj.io/storj/private/version" // This attaches version information during release builds.
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process"
 	"storj.io/storj/versioncontrol"
 )
 

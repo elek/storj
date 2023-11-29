@@ -18,15 +18,15 @@ import (
 	"storj.io/common/pb"
 	"storj.io/common/useragent"
 	"storj.io/common/uuid"
-	"storj.io/private/dbutil"
-	"storj.io/private/dbutil/pgutil"
-	"storj.io/private/dbutil/pgutil/pgerrcode"
-	"storj.io/private/dbutil/pgxutil"
-	"storj.io/private/tagsql"
 	"storj.io/storj/satellite/accounting"
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/orders"
 	"storj.io/storj/satellite/satellitedb/dbx"
+	"storj.io/storj/shared/dbutil"
+	"storj.io/storj/shared/dbutil/pgutil"
+	"storj.io/storj/shared/dbutil/pgutil/pgerrcode"
+	"storj.io/storj/shared/dbutil/pgxutil"
+	"storj.io/storj/shared/tagsql"
 )
 
 // ensure that ProjectAccounting implements accounting.ProjectAccounting.

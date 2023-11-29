@@ -15,13 +15,13 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"storj.io/common/peertls/extensions"
-	"storj.io/private/debug"
-	"storj.io/private/version"
 	"storj.io/storj/private/lifecycle"
 	"storj.io/storj/satellite/gc/bloomfilter"
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/metabase/rangedloop"
 	"storj.io/storj/satellite/overlay"
+	"storj.io/storj/shared/debug"
+	"storj.io/storj/shared/version"
 )
 
 // GarbageCollectionBF is the satellite garbage collection process which collects bloom filters.

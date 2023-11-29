@@ -10,8 +10,8 @@ import (
 	"github.com/zeebo/errs"
 
 	"storj.io/common/identity"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process"
 )
 
 var (

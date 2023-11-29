@@ -8,8 +8,8 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/fpath"
-	"storj.io/private/cfgstruct"
 	"storj.io/storj/cmd/storagenode/internalcmd"
+	"storj.io/storj/shared/cfgstruct"
 	"storj.io/storj/storagenode"
 )
 

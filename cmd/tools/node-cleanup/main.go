@@ -18,9 +18,9 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/storj"
-	"storj.io/private/process"
-	"storj.io/private/tagsql"
 	"storj.io/storj/satellite/satellitedb"
+	"storj.io/storj/shared/process"
+	"storj.io/storj/shared/tagsql"
 )
 
 var mon = monkit.Package()

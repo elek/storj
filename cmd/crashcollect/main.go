@@ -13,9 +13,9 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/fpath"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process"
 	"storj.io/storj/crashcollect"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process"
 )
 
 // Config defines storj crash collect service configuration.

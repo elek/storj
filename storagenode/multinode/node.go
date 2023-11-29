@@ -9,8 +9,8 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/rpc/rpcstatus"
-	"storj.io/private/version"
 	"storj.io/storj/private/multinodepb"
+	"storj.io/storj/shared/version"
 	"storj.io/storj/storagenode/apikeys"
 	"storj.io/storj/storagenode/contact"
 	"storj.io/storj/storagenode/operator"

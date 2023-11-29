@@ -12,11 +12,11 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/uuid"
-	"storj.io/private/process"
 	"storj.io/storj/satellite"
 	"storj.io/storj/satellite/analytics"
 	"storj.io/storj/satellite/payments/stripe"
 	"storj.io/storj/satellite/satellitedb"
+	"storj.io/storj/shared/process"
 )
 
 func runBillingCmd(ctx context.Context, cmdFunc func(context.Context, *stripe.Service, satellite.DB) error) error {

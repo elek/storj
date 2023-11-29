@@ -14,9 +14,9 @@ import (
 
 	"storj.io/common/memory"
 	"storj.io/common/storj"
-	"storj.io/private/dbutil/pgutil/pgerrcode"
-	"storj.io/private/dbutil/txutil"
-	"storj.io/private/tagsql"
+	"storj.io/storj/shared/dbutil/pgutil/pgerrcode"
+	"storj.io/storj/shared/dbutil/txutil"
+	"storj.io/storj/shared/tagsql"
 )
 
 // we need to disable PlainSize validation for old uplinks.

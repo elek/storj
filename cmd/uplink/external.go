@@ -33,7 +33,7 @@ import (
 	"storj.io/common/sync2/mpscqueue"
 	"storj.io/common/tracing"
 	jaeger "storj.io/monkit-jaeger"
-	"storj.io/private/version"
+	"storj.io/storj/shared/version"
 )
 
 type external struct {

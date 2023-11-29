@@ -19,13 +19,13 @@ import (
 	"storj.io/common/peertls/tlsopts"
 	"storj.io/common/rpc"
 	"storj.io/common/storj"
-	"storj.io/private/debug"
-	"storj.io/private/version"
 	"storj.io/storj/private/lifecycle"
 	version_checker "storj.io/storj/private/version/checker"
 	"storj.io/storj/satellite/gc/sender"
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/overlay"
+	"storj.io/storj/shared/debug"
+	"storj.io/storj/shared/version"
 )
 
 // GarbageCollection is the satellite garbage collection process.

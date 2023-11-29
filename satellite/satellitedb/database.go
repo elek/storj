@@ -11,9 +11,6 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/lrucache"
-	"storj.io/private/dbutil"
-	"storj.io/private/dbutil/pgutil"
-	"storj.io/private/tagsql"
 	"storj.io/storj/private/migrate"
 	"storj.io/storj/satellite"
 	"storj.io/storj/satellite/accounting"
@@ -36,6 +33,9 @@ import (
 	"storj.io/storj/satellite/revocation"
 	"storj.io/storj/satellite/satellitedb/dbx"
 	"storj.io/storj/satellite/snopayouts"
+	"storj.io/storj/shared/dbutil"
+	"storj.io/storj/shared/dbutil/pgutil"
+	"storj.io/storj/shared/tagsql"
 )
 
 // Error is the default satellitedb errs class.

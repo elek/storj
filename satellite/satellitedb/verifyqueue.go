@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"storj.io/common/uuid"
-	"storj.io/private/dbutil"
-	"storj.io/private/dbutil/pgutil"
 	"storj.io/storj/satellite/audit"
+	"storj.io/storj/shared/dbutil"
+	"storj.io/storj/shared/dbutil/pgutil"
 )
 
 const (

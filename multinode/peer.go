@@ -17,7 +17,6 @@ import (
 	"storj.io/common/identity"
 	"storj.io/common/peertls/tlsopts"
 	"storj.io/common/rpc"
-	"storj.io/private/debug"
 	"storj.io/storj/multinode/bandwidth"
 	"storj.io/storj/multinode/console/server"
 	"storj.io/storj/multinode/nodes"
@@ -26,6 +25,7 @@ import (
 	"storj.io/storj/multinode/reputation"
 	"storj.io/storj/multinode/storage"
 	"storj.io/storj/private/lifecycle"
+	"storj.io/storj/shared/debug"
 	multinodeweb "storj.io/storj/web/multinode"
 )
 

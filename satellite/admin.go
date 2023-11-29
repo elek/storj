@@ -16,8 +16,6 @@ import (
 
 	"storj.io/common/identity"
 	"storj.io/common/storj"
-	"storj.io/private/debug"
-	"storj.io/private/version"
 	"storj.io/storj/private/lifecycle"
 	"storj.io/storj/private/version/checker"
 	"storj.io/storj/satellite/accounting"
@@ -30,6 +28,8 @@ import (
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/payments"
 	"storj.io/storj/satellite/payments/stripe"
+	"storj.io/storj/shared/debug"
+	"storj.io/storj/shared/version"
 )
 
 // Admin is the satellite core process that runs chores.

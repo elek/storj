@@ -15,9 +15,9 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/uuid"
-	"storj.io/private/dbutil/pgutil"
-	"storj.io/private/process"
 	"storj.io/storj/satellite/metabase"
+	"storj.io/storj/shared/dbutil/pgutil"
+	"storj.io/storj/shared/process"
 )
 
 var mon = monkit.Package()

@@ -14,10 +14,10 @@ import (
 
 	"storj.io/common/pb"
 	"storj.io/common/storj"
-	"storj.io/private/dbutil/pgutil"
-	"storj.io/private/version"
 	"storj.io/storj/satellite/nodeselection"
 	"storj.io/storj/satellite/overlay"
+	"storj.io/storj/shared/dbutil/pgutil"
+	"storj.io/storj/shared/version"
 )
 
 func (cache *overlaycache) SelectStorageNodes(ctx context.Context, totalNeededNodes, newNodeCount int, criteria *overlay.NodeCriteria) (nodes []*nodeselection.SelectedNode, err error) {

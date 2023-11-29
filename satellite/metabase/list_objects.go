@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"storj.io/common/uuid"
-	"storj.io/private/tagsql"
+	"storj.io/storj/shared/tagsql"
 )
 
 // ListObjectsCursor is a cursor used during iteration through objects.

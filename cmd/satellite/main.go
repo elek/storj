@@ -28,10 +28,6 @@ import (
 	"storj.io/common/rpc"
 	"storj.io/common/storj"
 	"storj.io/common/sync2"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process"
-	_ "storj.io/private/process/googleprofiler" // This attaches google cloud profiler.
-	"storj.io/private/version"
 	"storj.io/storj/cmd/satellite/reports"
 	"storj.io/storj/private/revocation"
 	_ "storj.io/storj/private/version" // This attaches version information during release builds.
@@ -43,6 +39,10 @@ import (
 	"storj.io/storj/satellite/nodeselection"
 	"storj.io/storj/satellite/payments/stripe"
 	"storj.io/storj/satellite/satellitedb"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process"
+	_ "storj.io/storj/shared/process/googleprofiler" // This attaches google cloud profiler.
+	"storj.io/storj/shared/version"
 )
 
 // Satellite defines satellite configuration.

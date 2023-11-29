@@ -29,8 +29,8 @@ import (
 	"storj.io/common/pb"
 	"storj.io/common/processgroup"
 	"storj.io/common/storj"
-	"storj.io/private/dbutil"
-	"storj.io/private/dbutil/pgutil"
+	"storj.io/storj/shared/dbutil"
+	"storj.io/storj/shared/dbutil/pgutil"
 	"storj.io/uplink"
 )
 

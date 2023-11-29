@@ -12,7 +12,7 @@ import (
 
 	"storj.io/common/storj"
 	"storj.io/common/uuid"
-	"storj.io/private/tagsql"
+	"storj.io/storj/shared/tagsql"
 )
 
 const loopIteratorBatchSizeLimit = intLimitRange(5000)

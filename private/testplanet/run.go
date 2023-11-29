@@ -13,12 +13,12 @@ import (
 
 	"storj.io/common/context2"
 	"storj.io/common/testcontext"
-	"storj.io/private/dbutil"
-	"storj.io/private/dbutil/pgtest"
-	"storj.io/private/dbutil/pgutil"
-	"storj.io/private/tagsql"
 	"storj.io/storj/private/testmonkit"
 	"storj.io/storj/satellite/satellitedb/satellitedbtest"
+	"storj.io/storj/shared/dbutil"
+	"storj.io/storj/shared/dbutil/pgtest"
+	"storj.io/storj/shared/dbutil/pgutil"
+	"storj.io/storj/shared/tagsql"
 )
 
 // Run runs testplanet in multiple configurations.

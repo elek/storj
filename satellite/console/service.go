@@ -31,7 +31,6 @@ import (
 	"storj.io/common/macaroon"
 	"storj.io/common/memory"
 	"storj.io/common/uuid"
-	"storj.io/private/cfgstruct"
 	"storj.io/storj/private/api"
 	"storj.io/storj/private/blockchain"
 	"storj.io/storj/private/post"
@@ -43,6 +42,7 @@ import (
 	"storj.io/storj/satellite/payments"
 	"storj.io/storj/satellite/payments/billing"
 	"storj.io/storj/satellite/satellitedb/dbx"
+	"storj.io/storj/shared/cfgstruct"
 )
 
 var mon = monkit.Package()

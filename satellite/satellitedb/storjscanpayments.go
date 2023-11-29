@@ -11,11 +11,11 @@ import (
 	"github.com/zeebo/errs"
 
 	"storj.io/common/currency"
-	"storj.io/private/dbutil/pgutil"
 	"storj.io/storj/private/blockchain"
 	"storj.io/storj/satellite/payments"
 	"storj.io/storj/satellite/payments/storjscan"
 	"storj.io/storj/satellite/satellitedb/dbx"
+	"storj.io/storj/shared/dbutil/pgutil"
 )
 
 var _ storjscan.PaymentsDB = (*storjscanPayments)(nil)

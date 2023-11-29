@@ -5,16 +5,16 @@ package version
 
 import _ "unsafe" // needed for go:linkname
 
-//go:linkname buildTimestamp storj.io/private/version.buildTimestamp
+//go:linkname buildTimestamp storj.io/storj/shared/version.buildTimestamp
 var buildTimestamp string
 
-//go:linkname buildCommitHash storj.io/private/version.buildCommitHash
+//go:linkname buildCommitHash storj.io/storj/shared/version.buildCommitHash
 var buildCommitHash string
 
-//go:linkname buildVersion storj.io/private/version.buildVersion
+//go:linkname buildVersion storj.io/storj/shared/version.buildVersion
 var buildVersion string
 
-//go:linkname buildRelease storj.io/private/version.buildRelease
+//go:linkname buildRelease storj.io/storj/shared/version.buildRelease
 var buildRelease string
 
 // ensure that linter understands that the variables are being used.

@@ -11,8 +11,6 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/context2"
-	"storj.io/private/process"
-	"storj.io/private/version"
 	"storj.io/storj/private/revocation"
 	"storj.io/storj/satellite"
 	"storj.io/storj/satellite/accounting"
@@ -20,6 +18,8 @@ import (
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/orders"
 	"storj.io/storj/satellite/satellitedb"
+	"storj.io/storj/shared/process"
+	"storj.io/storj/shared/version"
 )
 
 func cmdAPIRun(cmd *cobra.Command, args []string) (err error) {

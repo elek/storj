@@ -3,7 +3,7 @@
 
 package storagenodedb
 
-import "storj.io/private/tagsql"
+import "storj.io/storj/shared/tagsql"
 
 // dbContainerImpl fulfills the migrate.DB interface and the SQLDB interface.
 type dbContainerImpl struct {

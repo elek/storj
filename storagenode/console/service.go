@@ -14,9 +14,9 @@ import (
 
 	"storj.io/common/memory"
 	"storj.io/common/storj"
-	"storj.io/private/version"
 	"storj.io/storj/private/date"
 	"storj.io/storj/private/version/checker"
+	"storj.io/storj/shared/version"
 	"storj.io/storj/storagenode/bandwidth"
 	"storj.io/storj/storagenode/contact"
 	"storj.io/storj/storagenode/operator"

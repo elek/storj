@@ -21,8 +21,6 @@ import (
 	"storj.io/common/rpc"
 	"storj.io/common/storj"
 	"storj.io/common/uuid"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/version"
 	"storj.io/storj/private/revocation"
 	"storj.io/storj/private/server"
 	"storj.io/storj/private/testredis"
@@ -57,6 +55,8 @@ import (
 	"storj.io/storj/satellite/repair/repairer"
 	"storj.io/storj/satellite/reputation"
 	"storj.io/storj/satellite/satellitedb/satellitedbtest"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/version"
 )
 
 // Satellite contains all the processes needed to run a full Satellite setup.

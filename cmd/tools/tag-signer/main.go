@@ -23,7 +23,7 @@ import (
 	"storj.io/common/pb"
 	"storj.io/common/signing"
 	"storj.io/common/storj"
-	"storj.io/private/process"
+	"storj.io/storj/shared/process"
 )
 
 var (

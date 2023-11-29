@@ -17,9 +17,9 @@ import (
 
 	"storj.io/common/storj"
 	"storj.io/common/storj/location"
-	"storj.io/private/process"
 	"storj.io/storj/satellite/nodeselection"
 	"storj.io/storj/satellite/overlay"
+	"storj.io/storj/shared/process"
 )
 
 var (

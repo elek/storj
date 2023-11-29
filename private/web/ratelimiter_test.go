@@ -15,8 +15,8 @@ import (
 	"go.uber.org/zap/zaptest"
 
 	"storj.io/common/testcontext"
-	"storj.io/private/cfgstruct"
 	"storj.io/storj/private/web"
+	"storj.io/storj/shared/cfgstruct"
 )
 
 func TestNewIPRateLimiter(t *testing.T) {

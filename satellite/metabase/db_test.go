@@ -12,9 +12,9 @@ import (
 
 	"storj.io/common/testcontext"
 	"storj.io/common/testrand"
-	"storj.io/private/dbutil/pgutil/pgerrcode"
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/metabase/metabasetest"
+	"storj.io/storj/shared/dbutil/pgutil/pgerrcode"
 )
 
 func TestNow(t *testing.T) {

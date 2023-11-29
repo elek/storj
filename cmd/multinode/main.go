@@ -23,12 +23,12 @@ import (
 	"storj.io/common/peertls/tlsopts"
 	"storj.io/common/rpc"
 	"storj.io/common/storj"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process"
 	"storj.io/storj/multinode"
 	"storj.io/storj/multinode/multinodedb"
 	"storj.io/storj/multinode/nodes"
 	"storj.io/storj/private/multinodeauth"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process"
 )
 
 // Config defines multinode configuration.

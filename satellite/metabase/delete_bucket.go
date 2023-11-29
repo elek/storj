@@ -6,7 +6,7 @@ package metabase
 import (
 	"context"
 
-	"storj.io/private/dbutil"
+	"storj.io/storj/shared/dbutil"
 )
 
 const (

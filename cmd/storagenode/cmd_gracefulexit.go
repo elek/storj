@@ -19,10 +19,10 @@ import (
 	"storj.io/common/memory"
 	"storj.io/common/rpc"
 	"storj.io/common/storj"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process"
 	"storj.io/storj/private/date"
 	"storj.io/storj/private/prompt"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process"
 	"storj.io/storj/storagenode"
 	"storj.io/storj/storagenode/internalpb"
 )

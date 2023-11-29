@@ -12,9 +12,9 @@ import (
 
 	"storj.io/common/storj"
 	"storj.io/common/uuid"
-	"storj.io/private/dbutil/pgutil"
 	"storj.io/storj/satellite/nodeevents"
 	"storj.io/storj/satellite/satellitedb/dbx"
+	"storj.io/storj/shared/dbutil/pgutil"
 )
 
 var _ nodeevents.DB = (*nodeEvents)(nil)

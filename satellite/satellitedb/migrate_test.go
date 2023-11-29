@@ -25,13 +25,13 @@ import (
 
 	"storj.io/common/sync2"
 	"storj.io/common/testcontext"
-	"storj.io/private/dbutil/dbschema"
-	"storj.io/private/dbutil/pgtest"
-	"storj.io/private/dbutil/pgutil"
-	"storj.io/private/dbutil/tempdb"
 	"storj.io/storj/private/migrate"
 	"storj.io/storj/satellite"
 	"storj.io/storj/satellite/satellitedb"
+	"storj.io/storj/shared/dbutil/dbschema"
+	"storj.io/storj/shared/dbutil/pgtest"
+	"storj.io/storj/shared/dbutil/pgutil"
+	"storj.io/storj/shared/dbutil/tempdb"
 )
 
 const maxMigrationsToTest = 10

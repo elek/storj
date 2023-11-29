@@ -17,8 +17,8 @@ import (
 
 	"storj.io/common/memory"
 	"storj.io/common/storj"
-	"storj.io/private/cfgstruct"
-	"storj.io/private/process"
+	"storj.io/storj/shared/cfgstruct"
+	"storj.io/storj/shared/process"
 	"storj.io/storj/storagenode"
 	"storj.io/storj/storagenode/storagenodedb"
 )
