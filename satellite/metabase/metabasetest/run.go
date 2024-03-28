@@ -38,7 +38,13 @@ func RunWithConfigAndMigration(t *testing.T, config metabase.Config, fn func(ctx
 			t.Parallel()
 
 			mudtest.Run[*metabase.DB](t, func(ball *mud.Ball) {
-				mud.Provide[*metabase.DB](ball, createMetabaseDBOnTopOf)
+				mud.Provide[*metabase.DB](ball, func(ctx context.Context, log *zap.Logger, tempDB *dbutil.TempDatabase, config metabase.Config, adapters []metabase.Adapter) (*metabase.DB, error) {
+					db, err := metabase.Open(ctx, log.Named("metabase"), tempDB.ConnStr, config, adapters...)
+					if err != nil {
+						return nil, err
+					}
+					return db, nil
+				})
 				mud.Provide[*dbutil.TempDatabase](ball, satellitedbtest.CreateTempDB)
 				mud.Provide[metabase.Config](ball, func() metabase.Config {
 					cfg := metabase.Config{
@@ -63,6 +69,10 @@ func RunWithConfigAndMigration(t *testing.T, config metabase.Config, fn func(ctx
 					Category: "M",
 					Index:    0,
 				})
+				mud.RegisterImplementation[[]metabase.Adapter](ball)
+				if dbinfo.Spanner != "" {
+					metabase.SpannerTestModule(ball, dbinfo.Spanner)
+				}
 			}, func(ctx context.Context, t *testing.T, db *metabase.DB) {
 				tctx := testcontext.New(t)
 				defer tctx.Cleanup()
@@ -126,12 +136,4 @@ func Bench(b *testing.B, fn func(ctx *testcontext.Context, b *testing.B, db *met
 			fn(ctx, b, db)
 		})
 	}
-}
-
-func createMetabaseDBOnTopOf(ctx context.Context, log *zap.Logger, tempDB *dbutil.TempDatabase, config metabase.Config) (*metabase.DB, error) {
-	db, err := metabase.Open(ctx, log.Named("metabase"), tempDB.ConnStr, config)
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
 }

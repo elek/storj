@@ -228,7 +228,6 @@ func Provide[A any](ball *Ball, factory interface{}) {
 	RegisterManual[A](ball, func(ctx context.Context) (A, error) {
 		return Execute[A](ctx, ball, factory)
 	})
-
 	t := typeOf[A]()
 	component, _ := lookupByType(ball, t)
 
