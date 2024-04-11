@@ -402,7 +402,7 @@ func TestAllInOne(t *testing.T) {
 
 		service := rangedloop.NewService(log, config, metabaseProvider, []rangedloop.Observer{
 			rangedloop.NewLiveCountObserver(satellite.Metabase.DB, config.SuspiciousProcessedRatio, config.AsOfSystemInterval),
-			metrics.NewObserver(),
+			metrics.NewObserver(log),
 			nodetally.NewObserver(log.Named("accounting:nodetally"),
 				satellite.DB.StoragenodeAccounting(),
 				satellite.Metabase.DB,

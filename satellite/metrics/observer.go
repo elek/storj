@@ -10,6 +10,7 @@ import (
 
 	"github.com/spacemonkeygo/monkit/v3"
 	"github.com/zeebo/errs"
+	"go.uber.org/zap"
 
 	"storj.io/common/storj"
 	"storj.io/common/uuid"
@@ -25,6 +26,7 @@ var (
 // Observer implements the ranged segment loop observer interface for data
 // science metrics collection.
 type Observer struct {
+	log     *zap.Logger
 	metrics PlacementsMetrics
 }
 
@@ -32,8 +34,10 @@ var _ rangedloop.Observer = (*Observer)(nil)
 
 // NewObserver instantiates a new rangedloop observer which aggregates
 // object statistics from observed segments.
-func NewObserver() *Observer {
-	return &Observer{}
+func NewObserver(log *zap.Logger) *Observer {
+	return &Observer{
+		log: log,
+	}
 }
 
 // Start implements the Observer method of the same name by resetting the
@@ -78,6 +82,8 @@ func (obs *Observer) Finish(ctx context.Context) error {
 		mon.IntVal("total_remote_segments", tag).Observe(m.TotalRemoteSegments) //mon:locked
 
 		mon.IntVal("total_segments_with_expires_at", tag).Observe(m.TotalSegmentsWithExpiresAt) //mon:locked
+
+		obs.log.Debug("observed segments", zap.Int64("count", m.TotalInlineSegments+m.TotalRemoteSegments))
 	})
 
 	return nil

@@ -9,8 +9,10 @@ import (
 	"errors"
 	"time"
 
+	"cloud.google.com/go/spanner"
 	pgxerrcode "github.com/jackc/pgerrcode"
 	"github.com/zeebo/errs"
+	"google.golang.org/api/iterator"
 
 	"storj.io/common/dbutil"
 	"storj.io/common/dbutil/pgutil/pgerrcode"
@@ -131,6 +133,91 @@ func (p *PostgresAdapter) BeginObjectNextVersion(ctx context.Context, opts Begin
 	).Scan(&object.Status, &object.Version, &object.CreatedAt)
 }
 
+// BeginObjectNextVersion spanner implementation.
+func (s *SpannerAdapter) BeginObjectNextVersion(ctx context.Context, opts BeginObjectNextVersion, object *Object) error {
+	_, err := s.client.ReadWriteTransaction(ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+		enc, err := encryptionParameters{&opts.Encryption}.Value()
+		if err != nil {
+			return errs.Wrap(err)
+		}
+
+		lastVersionStmt := spanner.Statement{
+			SQL: `SELECT version
+					FROM objects
+					WHERE (project_id, bucket_name, object_key) = (@project_id, @bucket_name, @object_key)
+					ORDER BY version DESC
+					LIMIT 1`,
+			Params: map[string]interface{}{
+				"project_id":  opts.ProjectID.Bytes(),
+				"bucket_name": opts.BucketName,
+				"object_key":  []byte(opts.ObjectKey),
+			},
+		}
+
+		var nextVersion int64
+		iter := txn.Query(ctx, lastVersionStmt)
+		defer iter.Stop()
+		for {
+			row, err := iter.Next()
+			if errors.Is(err, iterator.Done) {
+				break
+			}
+			if err != nil {
+				return errs.Wrap(err)
+			}
+			if err := row.Columns(&nextVersion); err != nil {
+				return errs.Wrap(err)
+			}
+		}
+		nextVersion++
+
+		stmt := spanner.Statement{
+			SQL: `INSERT objects (
+					project_id, bucket_name, object_key, version, stream_id,
+					expires_at, encryption,
+					zombie_deletion_deadline,
+					encrypted_metadata, encrypted_metadata_nonce, encrypted_metadata_encrypted_key)
+				  VALUES(
+                  	@project_id, @bucket_name,
+					@object_key, @version, @stream_id, @expires_at,
+					@encryption, @zombie_deletion_deadline,
+					@encrypted_metadata, @encrypted_metadata_nonce, @encrypted_metadata_encrypted_key) 
+                  THEN RETURN status,version,created_at`,
+			Params: map[string]interface{}{
+				"project_id":                       opts.ProjectID.Bytes(),
+				"bucket_name":                      opts.BucketName,
+				"object_key":                       []byte(opts.ObjectKey),
+				"version":                          nextVersion,
+				"stream_id":                        opts.StreamID.Bytes(),
+				"expires_at":                       opts.ExpiresAt,
+				"encryption":                       enc,
+				"zombie_deletion_deadline":         opts.ZombieDeletionDeadline,
+				"encrypted_metadata":               opts.EncryptedMetadata,
+				"encrypted_metadata_nonce":         opts.EncryptedMetadataNonce,
+				"encrypted_metadata_encrypted_key": opts.EncryptedMetadataEncryptedKey,
+			},
+		}
+		updateIter := txn.Query(ctx, stmt)
+		defer updateIter.Stop()
+		for {
+			row, err := updateIter.Next()
+			if errors.Is(err, iterator.Done) {
+				break
+			}
+			if err != nil {
+				return errs.Wrap(err)
+			}
+			var status int64
+			if err := row.Columns(&status, &object.Version, &object.CreatedAt); err != nil {
+				return errs.Wrap(err)
+			}
+			object.Status = ObjectStatus(byte(status))
+		}
+		return nil
+	})
+	return err
+}
+
 // BeginObjectExactVersion contains arguments necessary for starting an object upload.
 type BeginObjectExactVersion struct {
 	ObjectStream
@@ -224,6 +311,10 @@ func (p *PostgresAdapter) TestingBeginObjectExactVersion(ctx context.Context, op
 	).Scan(
 		&object.Status, &object.CreatedAt,
 	)
+}
+
+func (s *SpannerAdapter) TestingBeginObjectExactVersion(ctx context.Context, opts BeginObjectExactVersion, object *Object) error {
+	return errs.New("unimplemented")
 }
 
 // BeginSegment contains options to verify, whether a new segment upload can be started.

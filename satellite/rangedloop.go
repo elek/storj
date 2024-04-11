@@ -6,10 +6,8 @@ package satellite
 import (
 	"context"
 	"errors"
-	"math/rand"
 	"net"
 	"runtime/pprof"
-	"time"
 
 	"github.com/spacemonkeygo/monkit/v3"
 	"github.com/zeebo/errs"
@@ -112,7 +110,7 @@ func NewRangedLoop(log *zap.Logger, db DB, metabaseDB *metabase.DB, config *Conf
 	}
 
 	{ // setup metrics observer
-		peer.Metrics.Observer = metrics.NewObserver()
+		peer.Metrics.Observer = metrics.NewObserver(log)
 	}
 
 	{ // setup node tally observer
@@ -185,41 +183,41 @@ func NewRangedLoop(log *zap.Logger, db DB, metabaseDB *metabase.DB, config *Conf
 	}
 
 	{ // setup ranged loop
-		rand := rand.New(rand.NewSource(time.Now().UnixNano()))
+		// rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 		observers := []rangedloop.Observer{
-			rangedloop.NewLiveCountObserver(metabaseDB, config.RangedLoop.SuspiciousProcessedRatio, config.RangedLoop.AsOfSystemInterval),
+			// rangedloop.NewLiveCountObserver(metabaseDB, config.RangedLoop.SuspiciousProcessedRatio, config.RangedLoop.AsOfSystemInterval),
 			peer.Metrics.Observer,
 		}
 
-		if config.Audit.UseRangedLoop {
-			observers = append(observers, peer.Audit.Observer)
-		}
+		// if config.Audit.UseRangedLoop {
+		// 	observers = append(observers, peer.Audit.Observer)
+		// }
 
-		if config.Tally.UseRangedLoop {
-			observers = append(observers, peer.Accounting.NodeTallyObserver)
-		}
+		// if config.Tally.UseRangedLoop {
+		// 	observers = append(observers, peer.Accounting.NodeTallyObserver)
+		// }
 
-		if config.Repairer.UseRangedLoop {
-			observers = append(observers, peer.Repair.Observer)
-		}
+		// if config.Repairer.UseRangedLoop {
+		// 	observers = append(observers, peer.Repair.Observer)
+		// }
 
-		if config.PieceTracker.UseRangedLoop {
-			observers = append(observers, peer.PieceTracker.Observer)
-		}
+		// if config.PieceTracker.UseRangedLoop {
+		// 	observers = append(observers, peer.PieceTracker.Observer)
+		// }
 
-		if config.DurabilityReport.Enabled {
-			sequenceObservers := []rangedloop.Observer{}
-			for _, observer := range peer.DurabilityReport.Observer {
-				sequenceObservers = append(sequenceObservers, observer)
-			}
+		// if config.DurabilityReport.Enabled {
+		// 	sequenceObservers := []rangedloop.Observer{}
+		// 	for _, observer := range peer.DurabilityReport.Observer {
+		// 		sequenceObservers = append(sequenceObservers, observer)
+		// 	}
 
-			// suffle observers list to be sure that each observer will be executed first from time to time
-			rand.Shuffle(len(sequenceObservers), func(i, j int) {
-				sequenceObservers[i], sequenceObservers[j] = sequenceObservers[j], sequenceObservers[i]
-			})
-			observers = append(observers, rangedloop.NewSequenceObserver(sequenceObservers...))
-		}
+		// 	// suffle observers list to be sure that each observer will be executed first from time to time
+		// 	rand.Shuffle(len(sequenceObservers), func(i, j int) {
+		// 		sequenceObservers[i], sequenceObservers[j] = sequenceObservers[j], sequenceObservers[i]
+		// 	})
+		// 	observers = append(observers, rangedloop.NewSequenceObserver(sequenceObservers...))
+		// }
 
 		segments := rangedloop.NewMetabaseRangeSplitter(metabaseDB, config.RangedLoop.AsOfSystemInterval, config.RangedLoop.BatchSize)
 		peer.RangedLoop.Service = rangedloop.NewService(log.Named("rangedloop"), config.RangedLoop, segments, observers)

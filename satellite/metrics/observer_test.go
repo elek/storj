@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 
 	"storj.io/common/storj"
 	"storj.io/common/testcontext"
@@ -60,7 +61,7 @@ func TestObserver(t *testing.T) {
 	}
 
 	t.Run("stats aggregation", func(t *testing.T) {
-		obs := NewObserver()
+		obs := NewObserver(zaptest.NewLogger(t))
 
 		metrics := loop(t, obs, inline1, remote2, remote3, inline4, remote5)
 
@@ -94,7 +95,7 @@ func TestObserver(t *testing.T) {
 	})
 
 	t.Run("stats reset by start", func(t *testing.T) {
-		obs := NewObserver()
+		obs := NewObserver(zaptest.NewLogger(t))
 
 		_ = loop(t, obs, inline1)
 
@@ -132,7 +133,7 @@ func TestObserver(t *testing.T) {
 
 	t.Run("join fails gracefully on bad partial type", func(t *testing.T) {
 		type wrongPartial struct{ rangedloop.Partial }
-		obs := NewObserver()
+		obs := NewObserver(zaptest.NewLogger(t))
 		err := obs.Start(ctx, time.Time{})
 		require.NoError(t, err)
 		err = obs.Join(ctx, wrongPartial{})

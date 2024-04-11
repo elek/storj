@@ -248,6 +248,10 @@ func (cache *NodeAliasCache) convertAliasesToPieces(ctx context.Context, aliasPi
 	return pieces, nil
 }
 
+func (cache *NodeAliasCache) reset() {
+	//TODO
+}
+
 // NodeAliasMap contains bidirectional mapping between node ID and a NodeAlias.
 type NodeAliasMap struct {
 	node  []storj.NodeID

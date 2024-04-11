@@ -179,6 +179,11 @@ func (p *PostgresAdapter) GetObjectLastCommitted(ctx context.Context, opts GetOb
 	return Error.Wrap(err)
 }
 
+// GetObjectLastCommitted spanner implementation.
+func (s *SpannerAdapter) GetObjectLastCommitted(ctx context.Context, opts GetObjectLastCommitted, object *Object) error {
+	return errs.New("test")
+}
+
 // GetSegmentByPosition contains arguments necessary for fetching a segment on specific position.
 type GetSegmentByPosition struct {
 	StreamID uuid.UUID

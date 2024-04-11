@@ -7,10 +7,14 @@ import (
 	"context"
 	"sort"
 
+	"cloud.google.com/go/spanner"
 	"github.com/zeebo/errs"
+	"google.golang.org/api/iterator"
+	"google.golang.org/grpc/codes"
 
 	"storj.io/common/dbutil/pgutil"
 	"storj.io/common/storj"
+	"storj.io/common/uuid"
 )
 
 // NodeAlias is a metabase local alias for NodeID-s to reduce segment table size.
@@ -32,6 +36,12 @@ type EnsureNodeAliases struct {
 func (db *DB) EnsureNodeAliases(ctx context.Context, opts EnsureNodeAliases) (err error) {
 	defer mon.Task()(&ctx)(&err)
 
+	return db.ChooseAdapter(uuid.UUID{}).EnsureNodeAliases(ctx, opts)
+}
+
+func (p *PostgresAdapter) EnsureNodeAliases(ctx context.Context, opts EnsureNodeAliases) (err error) {
+	defer mon.Task()(&ctx)(&err)
+
 	unique := make([]storj.NodeID, 0, len(opts.Nodes))
 	seen := make(map[storj.NodeID]bool, len(opts.Nodes))
 
@@ -47,7 +57,7 @@ func (db *DB) EnsureNodeAliases(ctx context.Context, opts EnsureNodeAliases) (er
 
 	sort.Sort(storj.NodeIDList(unique))
 
-	_, err = db.db.ExecContext(ctx, `
+	_, err = p.db.ExecContext(ctx, `
 		INSERT INTO node_aliases(node_id)
 		SELECT unnest($1::BYTEA[])
 		ON CONFLICT DO NOTHING
@@ -55,12 +65,57 @@ func (db *DB) EnsureNodeAliases(ctx context.Context, opts EnsureNodeAliases) (er
 	return Error.Wrap(err)
 }
 
+func (s *SpannerAdapter) EnsureNodeAliases(ctx context.Context, opts EnsureNodeAliases) (err error) {
+	defer mon.Task()(&ctx)(&err)
+
+	unique := make([]storj.NodeID, 0, len(opts.Nodes))
+	seen := make(map[storj.NodeID]bool, len(opts.Nodes))
+
+	for _, node := range opts.Nodes {
+		if node.IsZero() {
+			return Error.New("tried to add alias to zero node")
+		}
+		if !seen[node] {
+			seen[node] = true
+			unique = append(unique, node)
+		}
+	}
+
+	sort.Sort(storj.NodeIDList(unique))
+
+	// TODO limited alias value to avoid out of memory
+	maxAliasValue := 10000
+	// TODO this is not prod ready implementation
+	// TODO figure out how to do something like ON CONFLICT DO NOTHING
+	for _, entry := range unique {
+		_, err = s.client.Apply(ctx, []*spanner.Mutation{
+			spanner.Insert("node_aliases", []string{"node_id", "node_alias"}, []interface{}{
+				entry.Bytes(), maxAliasValue + 1,
+			}),
+		})
+		if spanner.ErrCode(err) == codes.AlreadyExists {
+			continue
+		}
+		if err != nil {
+			return Error.Wrap(err)
+		}
+	}
+	return nil
+
+}
+
 // ListNodeAliases lists all node alias mappings.
 func (db *DB) ListNodeAliases(ctx context.Context) (_ []NodeAliasEntry, err error) {
 	defer mon.Task()(&ctx)(&err)
 
+	return db.ChooseAdapter(uuid.UUID{}).ListNodeAliases(ctx)
+}
+
+func (p *PostgresAdapter) ListNodeAliases(ctx context.Context) (_ []NodeAliasEntry, err error) {
+	defer mon.Task()(&ctx)(&err)
+
 	var aliases []NodeAliasEntry
-	rows, err := db.db.Query(ctx, `
+	rows, err := p.db.Query(ctx, `
 		SELECT node_id, node_alias
 		FROM node_aliases
 	`)
@@ -82,6 +137,41 @@ func (db *DB) ListNodeAliases(ctx context.Context) (_ []NodeAliasEntry, err erro
 	}
 
 	return aliases, nil
+}
+
+func (s *SpannerAdapter) ListNodeAliases(ctx context.Context) (aliases []NodeAliasEntry, err error) {
+	defer mon.Task()(&ctx)(&err)
+
+	stmt := spanner.Statement{SQL: `
+		SELECT node_id, node_alias FROM node_aliases
+	`}
+	iter := s.client.Single().Query(ctx, stmt)
+	defer iter.Stop()
+
+	for {
+		row, err := iter.Next()
+		if err == iterator.Done {
+			return aliases, nil
+		}
+		if err != nil {
+			return nil, Error.Wrap(err)
+		}
+
+		var nodeID []byte
+		var nodeAlias int64
+		if err := row.Columns(&nodeID, &nodeAlias); err != nil {
+			return nil, Error.New("ListNodeAliases scan failed: %w", err)
+		}
+
+		id, err := storj.NodeIDFromBytes(nodeID)
+		if err != nil {
+			return nil, Error.Wrap(err)
+		}
+		aliases = append(aliases, NodeAliasEntry{
+			ID:    id,
+			Alias: NodeAlias(nodeAlias),
+		})
+	}
 }
 
 // LatestNodesAliasMap returns the latest mapping between storj.NodeID and NodeAlias.
