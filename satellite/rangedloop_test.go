@@ -56,7 +56,7 @@ func TestRangedLoop(t *testing.T) {
 		segments[i] = metabasetest.DefaultRawSegment(obj, metabase.SegmentPosition{})
 	}
 
-	require.NoError(t, metabaseDB.TestingBatchInsertSegments(ctx, segments))
+	require.NoError(t, metabaseDB.TestingBatchInsertSegments(ctx, nil, segments))
 
 	satelliteExe := ctx.Compile("storj.io/storj/cmd/satellite")
 	satelliteCmd := exec.Command(satelliteExe, "run", "ranged-loop", "--defaults", "release", "--log.level", "debug", "--database", tempDB.ConnStr, "--metainfo.database-url", spannerURL)
