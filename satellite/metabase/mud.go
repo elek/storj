@@ -20,6 +20,22 @@ import (
 //go:embed adapter_spanner_scheme.sql
 var spannerDDL string
 
+// SpannerModule adds all the required dependencies for Spanner migration and adapter.
+func SpannerModule(ball *mud.Ball, spannerConnection string) {
+	mud.Supply[SpannerConfig](ball, SpannerConfig{
+		Database: spannerConnection,
+	})
+	mud.Provide[*database.DatabaseAdminClient](ball, CreateAdminClient)
+	mud.Provide[SpannerMigrationInfo](ball, Migrate)
+	// TODO: now it always does migration, as it depends on the migration info
+	mud.Provide[*SpannerAdapter](ball, func(ctx context.Context, cfg SpannerConfig, info SpannerMigrationInfo) (*SpannerAdapter, error) {
+		return NewSpannerAdapter(ctx, cfg)
+	})
+	mud.Implementation[[]Adapter, *SpannerAdapter](ball)
+	mud.RemoveTag[*SpannerAdapter, mud.Optional](ball)
+
+}
+
 // SpannerTestModule adds all the required dependencies for Spanner migration and adapter.
 func SpannerTestModule(ball *mud.Ball, spannerConnection string) {
 	mud.Provide[*SpannerAdapter](ball, NewSpannerAdapter)

@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
+	"net/url"
+	"storj.io/storj/private/mud"
 
 	"storj.io/common/process"
 	"storj.io/storj/satellite"
@@ -26,7 +28,35 @@ func cmdRangedLoopRun(cmd *cobra.Command, args []string) (err error) {
 		err = errs.Combine(err, db.Close())
 	}()
 
-	metabaseDB, err := metabase.Open(ctx, log.Named("metabase"), runCfg.Metainfo.DatabaseURL, runCfg.Metainfo.Metabase("satellite-rangedloop"))
+	// this is a temporary workaround, as we don't support full spanner implementation (yet).
+	// for now, we can use spanner overlay with using &spanner=.... db url fragment.
+	// implemented methods will use the spanner implementation
+	var adapters []metabase.Adapter
+	parsedDbConnection, err := url.Parse(runCfg.Metainfo.DatabaseURL)
+	if err != nil {
+		return errs.Wrap(err)
+	}
+	if spannerConnection := parsedDbConnection.Query().Get("spanner"); spannerConnection != "" {
+		log.Info("Initializing spanner connection", zap.String("connection", spannerConnection))
+		ball := mud.NewBall()
+		metabase.SpannerModule(ball, spannerConnection)
+		for _, component := range mud.FindSelectedWithDependencies(ball, mud.Select[*metabase.SpannerAdapter](ball)) {
+			err := component.Init(ctx)
+			if err != nil {
+				return errs.Wrap(err)
+			}
+		}
+
+		adapter := mud.MustLookup[*metabase.SpannerAdapter](ball)
+		if err != nil {
+			return err
+		}
+		parsedDbConnection.Query().Del("spanner")
+		runCfg.Metainfo.DatabaseURL = parsedDbConnection.String()
+		adapters = append(adapters, adapter)
+	}
+
+	metabaseDB, err := metabase.Open(ctx, log.Named("metabase"), runCfg.Metainfo.DatabaseURL, runCfg.Metainfo.Metabase("satellite-rangedloop"), adapters...)
 	if err != nil {
 		return errs.New("Error creating metabase connection: %+v", err)
 	}
