@@ -163,7 +163,7 @@ func NewService(log *zap.Logger, store *pieces.Store, config Config) *Service {
 
 // Queue adds a retain request to the queue.
 // true is returned if the request is added to the queue, false if queue is closed.
-func (s *Service) Queue(satelliteID storj.NodeID, req *pb.RetainRequest) error {
+func (s *Service) Queue(ctx context.Context, satelliteID storj.NodeID, req *pb.RetainRequest) error {
 	s.cond.L.Lock()
 	defer s.cond.L.Unlock()
 

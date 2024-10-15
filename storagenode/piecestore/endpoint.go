@@ -117,7 +117,7 @@ type Endpoint struct {
 // QueueRetain is an interface for retaining pieces in the queue and checking status.
 // A restricted view of retain.Service.
 type QueueRetain interface {
-	Queue(satelliteID storj.NodeID, req *pb.RetainRequest) error
+	Queue(ctx context.Context, satelliteID storj.NodeID, req *pb.RetainRequest) error
 	Status() retain.Status
 }
 
@@ -964,10 +964,10 @@ func (endpoint *Endpoint) Retain(ctx context.Context, retainReq *pb.RetainReques
 		}
 	}
 
-	return endpoint.processRetainReq(peer.ID, retainReq)
+	return endpoint.processRetainReq(ctx, peer.ID, retainReq)
 }
 
-func (endpoint *Endpoint) processRetainReq(peerID storj.NodeID, retainReq *pb.RetainRequest) (res *pb.RetainResponse, err error) {
+func (endpoint *Endpoint) processRetainReq(ctx context.Context, peerID storj.NodeID, retainReq *pb.RetainRequest) (res *pb.RetainResponse, err error) {
 	filter, err := bloomfilter.NewFromBytes(retainReq.GetFilter())
 	if err != nil {
 		return nil, rpcstatus.Wrap(rpcstatus.InvalidArgument, err)
@@ -978,7 +978,10 @@ func (endpoint *Endpoint) processRetainReq(peerID storj.NodeID, retainReq *pb.Re
 	mon.IntVal("retain_creation_date").Observe(retainReq.CreationDate.Unix())
 
 	// the queue function will update the created before time based on the configurable retain buffer
-	endpoint.retain.Queue(peerID, retainReq)
+	err = endpoint.retain.Queue(ctx, peerID, retainReq)
+	if err != nil {
+		endpoint.log.Error("failed to queue retain request", zap.Error(err))
+	}
 
 	return &pb.RetainResponse{}, nil
 }
@@ -1009,7 +1012,7 @@ func (endpoint *Endpoint) RetainBig(stream pb.DRPCPiecestore_RetainBigStream) (e
 	if err != nil {
 		return rpcstatus.Wrap(rpcstatus.Internal, err)
 	}
-	_, err = endpoint.processRetainReq(peer.ID, &retainReq)
+	_, err = endpoint.processRetainReq(ctx, peer.ID, &retainReq)
 	return err
 }
 

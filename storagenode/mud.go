@@ -327,6 +327,14 @@ func Module(ball *mud.Ball) {
 		mud.Provide[*piecestore.OldPieceBackend](ball, piecestore.NewOldPieceBackend)
 		mud.RegisterInterfaceImplementation[piecestore.PieceBackend, *piecestore.OldPieceBackend](ball)
 
+		mud.Provide[*retain.BloomFilterManager](ball, func(cfg piecestore.OldConfig) (*retain.BloomFilterManager, error) {
+			return retain.NewBloomFilterManager(cfg.Path)
+		})
+
+		mud.Provide[*retain.RestoreTimeManager](ball, func(cfg piecestore.OldConfig) *retain.RestoreTimeManager {
+			return retain.NewRestoreTimeManager(cfg.Path)
+		})
+
 		mud.Provide[*piecestore.Endpoint](ball, piecestore.NewEndpoint, logWrapper("piecestore"))
 
 		mud.Provide[*orders.Service](ball, func(log *zap.Logger, ordersStore *orders.FileStore, ordersDB orders.DB, trust *trust.Pool, config orders.Config, tlsOptions *tlsopts.Options) *orders.Service {
