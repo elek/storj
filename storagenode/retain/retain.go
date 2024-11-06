@@ -163,13 +163,13 @@ func NewService(log *zap.Logger, store *pieces.Store, config Config) *Service {
 
 // Queue adds a retain request to the queue.
 // true is returned if the request is added to the queue, false if queue is closed.
-func (s *Service) Queue(satelliteID storj.NodeID, req *pb.RetainRequest) bool {
+func (s *Service) Queue(satelliteID storj.NodeID, req *pb.RetainRequest) error {
 	s.cond.L.Lock()
 	defer s.cond.L.Unlock()
 
 	select {
 	case <-s.closed:
-		return false
+		s.log.Info("Retain job not queued (queue is closed)", zap.Stringer("Satellite ID", satelliteID))
 	default:
 	}
 
@@ -177,10 +177,14 @@ func (s *Service) Queue(satelliteID storj.NodeID, req *pb.RetainRequest) bool {
 	if err != nil {
 		s.log.Warn("encountered an error while adding request to queue", zap.Error(err), zap.Bool("Queued", ok), zap.Stringer("Satellite ID", satelliteID))
 	}
+	if ok {
+		s.log.Info("Retain job queued", zap.Stringer("Satellite ID", satelliteID))
+	} else {
+		s.log.Info("Retain job not queued (queue is closed)", zap.Stringer("Satellite ID", satelliteID))
+	}
 
 	s.cond.Broadcast()
-
-	return ok
+	return nil
 }
 
 // Run listens for queued retain requests and processes them as they come in.

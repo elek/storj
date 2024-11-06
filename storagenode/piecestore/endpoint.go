@@ -117,7 +117,7 @@ type Endpoint struct {
 // QueueRetain is an interface for retaining pieces in the queue and checking status.
 // A restricted view of retain.Service.
 type QueueRetain interface {
-	Queue(satelliteID storj.NodeID, req *pb.RetainRequest) bool
+	Queue(satelliteID storj.NodeID, req *pb.RetainRequest) error
 	Status() retain.Status
 }
 
@@ -999,12 +999,7 @@ func (endpoint *Endpoint) processRetainReq(peerID storj.NodeID, retainReq *pb.Re
 	mon.IntVal("retain_creation_date").Observe(retainReq.CreationDate.Unix())
 
 	// the queue function will update the created before time based on the configurable retain buffer
-	queued := endpoint.retain.Queue(peerID, retainReq)
-	if queued {
-		endpoint.log.Info("Retain job queued", zap.Stringer("Satellite ID", peerID))
-	} else {
-		endpoint.log.Info("Retain job not queued (queue is closed)", zap.Stringer("Satellite ID", peerID))
-	}
+	endpoint.retain.Queue(peerID, retainReq)
 
 	return &pb.RetainResponse{}, nil
 }
