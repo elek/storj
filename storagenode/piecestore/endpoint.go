@@ -11,7 +11,6 @@ import (
 	"io"
 	"io/fs"
 	"net"
-	"os"
 	"reflect"
 	"runtime/trace"
 	"sync"
@@ -106,12 +105,11 @@ type Endpoint struct {
 	retain    QueueRetain
 	pingStats PingStatsSource
 
-	store        *pieces.Store
-	trashChore   RestoreTrash
-	usage        bandwidth.Writer
-	ordersStore  *orders.FileStore
-	usedSerials  *usedserials.Table
-	pieceDeleter EnqueueDeletes
+	store       *pieces.Store
+	trashChore  RestoreTrash
+	usage       bandwidth.Writer
+	ordersStore *orders.FileStore
+	usedSerials *usedserials.Table
 
 	liveRequests int32
 }
@@ -128,13 +126,8 @@ type RestoreTrash interface {
 	StartRestore(ctx context.Context, satellite storj.NodeID) error
 }
 
-// EnqueueDeletes is an interface for enqueuing deletes.
-type EnqueueDeletes interface {
-	Enqueue(ctx context.Context, satelliteID storj.NodeID, pieceIDs []storj.PieceID) (unhandled int)
-}
-
 // NewEndpoint creates a new piecestore endpoint.
-func NewEndpoint(log *zap.Logger, ident *identity.FullIdentity, trust *trust.Pool, monitor *monitor.Service, retain QueueRetain, pingStats PingStatsSource, store *pieces.Store, trashChore RestoreTrash, pieceDeleter EnqueueDeletes, ordersStore *orders.FileStore, usage bandwidth.Writer, usedSerials *usedserials.Table, config Config) (*Endpoint, error) {
+func NewEndpoint(log *zap.Logger, ident *identity.FullIdentity, trust *trust.Pool, monitor *monitor.Service, retain QueueRetain, pingStats PingStatsSource, store *pieces.Store, trashChore RestoreTrash, ordersStore *orders.FileStore, usage bandwidth.Writer, usedSerials *usedserials.Table, config Config) (*Endpoint, error) {
 	return &Endpoint{
 		log:    log,
 		config: config,
@@ -145,12 +138,11 @@ func NewEndpoint(log *zap.Logger, ident *identity.FullIdentity, trust *trust.Poo
 		retain:    retain,
 		pingStats: pingStats,
 
-		store:        store,
-		trashChore:   trashChore,
-		ordersStore:  ordersStore,
-		usage:        usage,
-		usedSerials:  usedSerials,
-		pieceDeleter: pieceDeleter,
+		store:       store,
+		trashChore:  trashChore,
+		ordersStore: ordersStore,
+		usage:       usage,
+		usedSerials: usedSerials,
 
 		liveRequests: 0,
 	}, nil
@@ -165,38 +157,7 @@ func (endpoint *Endpoint) Delete(ctx context.Context, delete *pb.PieceDeleteRequ
 	defer monLiveRequests(&ctx)(&err)
 	defer mon.Task()(&ctx)(&err)
 
-	atomic.AddInt32(&endpoint.liveRequests, 1)
-	defer atomic.AddInt32(&endpoint.liveRequests, -1)
-
-	endpoint.pingStats.WasPinged(time.Now())
-
-	if delete.Limit.Action != pb.PieceAction_DELETE {
-		return nil, rpcstatus.Errorf(rpcstatus.InvalidArgument,
-			"expected delete action got %v", delete.Limit.Action)
-	}
-
-	if err := endpoint.verifyOrderLimit(ctx, delete.Limit); err != nil {
-		return nil, rpcstatus.Wrap(rpcstatus.Unauthenticated, err)
-	}
-
-	log := endpoint.log.With(
-		zap.Stringer("Satellite ID", delete.Limit.SatelliteId),
-		zap.Stringer("Piece ID", delete.Limit.PieceId),
-		zap.String("Remote Address", getRemoteAddr(ctx)))
-
-	if err := endpoint.store.Delete(ctx, delete.Limit.SatelliteId, delete.Limit.PieceId); err != nil {
-		// explicitly ignoring error because the errors
-
-		// TODO: https://storjlabs.atlassian.net/browse/V3-3222
-		// report rpc status of internal server error or not found error,
-		// e.g. not found might happen when we get a deletion request after garbage
-		// collection has deleted it
-		log.Error("delete failed", zap.Error(err))
-	} else {
-		log.Info("deleted")
-	}
-
-	return &pb.PieceDeleteResponse{}, nil
+	return nil, rpcstatus.Errorf(rpcstatus.Unimplemented, "delete is no longer supported")
 }
 
 // DeletePieces delete a list of pieces on satellite request.
@@ -205,21 +166,7 @@ func (endpoint *Endpoint) DeletePieces(
 ) (_ *pb.DeletePiecesResponse, err error) {
 	defer mon.Task()(&ctx, req.PieceIds)(&err)
 
-	peer, err := identity.PeerIdentityFromContext(ctx)
-	if err != nil {
-		return nil, rpcstatus.Wrap(rpcstatus.Unauthenticated, err)
-	}
-
-	err = endpoint.trust.VerifySatelliteID(ctx, peer.ID)
-	if err != nil {
-		return nil, rpcstatus.Error(rpcstatus.PermissionDenied, "delete pieces called with untrusted ID")
-	}
-
-	unhandled := endpoint.pieceDeleter.Enqueue(ctx, peer.ID, req.PieceIds)
-
-	return &pb.DeletePiecesResponse{
-		UnhandledCount: int64(unhandled),
-	}, nil
+	return nil, rpcstatus.Errorf(rpcstatus.Unimplemented, "delete pieces is no longer supported")
 }
 
 // Exists check if pieces from the list exists on storage node. Request will
@@ -230,61 +177,7 @@ func (endpoint *Endpoint) Exists(
 ) (_ *pb.ExistsResponse, err error) {
 	defer mon.Task()(&ctx)(&err)
 
-	peer, err := identity.PeerIdentityFromContext(ctx)
-	if err != nil {
-		return nil, rpcstatus.Wrap(rpcstatus.Unauthenticated, err)
-	}
-
-	err = endpoint.trust.VerifySatelliteID(ctx, peer.ID)
-	if err != nil {
-		return nil, rpcstatus.Error(rpcstatus.PermissionDenied, "piecestore.exists called with untrusted ID")
-	}
-
-	if len(req.PieceIds) == 0 {
-		return &pb.ExistsResponse{}, nil
-	}
-
-	if endpoint.config.ExistsCheckWorkers < 1 {
-		endpoint.config.ExistsCheckWorkers = 1
-	}
-
-	limiter := sync2.NewLimiter(endpoint.config.ExistsCheckWorkers)
-	var mu sync.Mutex
-
-	missing := make([]uint32, 0, 100)
-
-	addMissing := func(index int) {
-		mu.Lock()
-		defer mu.Unlock()
-
-		missing = append(missing, uint32(index))
-	}
-
-	for index, pieceID := range req.PieceIds {
-		index := index
-		pieceID := pieceID
-
-		ok := limiter.Go(ctx, func() {
-			_, err := endpoint.store.Stat(ctx, peer.ID, pieceID)
-			if err != nil {
-				if errs.Is(err, os.ErrNotExist) {
-					addMissing(index)
-				}
-				endpoint.log.Debug("failed to stat piece", zap.String("Piece ID", pieceID.String()), zap.String("Satellite ID", peer.ID.String()), zap.Error(err))
-				return
-			}
-		})
-		if !ok {
-			limiter.Wait()
-			return nil, rpcstatus.Wrap(rpcstatus.Canceled, ctx.Err())
-		}
-	}
-
-	limiter.Wait()
-
-	return &pb.ExistsResponse{
-		Missing: missing,
-	}, nil
+	return nil, rpcstatus.Errorf(rpcstatus.Unimplemented, "exists is no longer supported")
 }
 
 var (
