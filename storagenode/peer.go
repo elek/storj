@@ -256,18 +256,20 @@ type Peer struct {
 
 	Storage2 struct {
 		// TODO: lift things outside of it to organize better
-		Trust          *trust.Pool
-		Store          *pieces.Store
-		TrashChore     *pieces.TrashChore
-		BlobsCache     *pieces.BlobsUsageCache
-		CacheService   *pieces.CacheService
-		RetainService  *retain.Service
-		Endpoint       *piecestore.Endpoint
-		Inspector      *inspector.Endpoint
-		Monitor        *monitor.Service
-		Orders         *orders.Service
-		FileWalker     *pieces.FileWalker
-		LazyFileWalker *lazyfilewalker.Supervisor
+		Trust              *trust.Pool
+		Store              *pieces.Store
+		TrashChore         *pieces.TrashChore
+		BlobsCache         *pieces.BlobsUsageCache
+		CacheService       *pieces.CacheService
+		RetainService      *retain.Service
+		Endpoint           *piecestore.Endpoint
+		Inspector          *inspector.Endpoint
+		Monitor            *monitor.Service
+		Orders             *orders.Service
+		FileWalker         *pieces.FileWalker
+		LazyFileWalker     *lazyfilewalker.Supervisor
+		RestoreTimeManager *retain.RestoreTimeManager
+		BloomFilterManager *retain.BloomFilterManager
 	}
 
 	Collector *collector.Service
@@ -655,14 +657,53 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB, revocationDB exten
 			Close: peer.OrdersStore.Close,
 		})
 
-		pieceBackend := piecestore.NewOldPieceBackend(peer.Storage2.Store, peer.Storage2.TrashChore, peer.Storage2.Monitor)
+		var pieceBackend piecestore.PieceBackend
+		var queueRetain piecestore.QueueRetain
+		switch config.Storage2.PieceBackend {
+		case "hashstore", "hash":
+			dir := filepath.Join(config.Storage.Path, "hashstore")
+			metaDir := filepath.Join(dir, "meta")
+
+			peer.Storage2.RestoreTimeManager = retain.NewRestoreTimeManager(metaDir)
+			peer.Storage2.BloomFilterManager, err = retain.NewBloomFilterManager(metaDir)
+
+			if err != nil {
+				var unwrapped []error
+				if ug, ok := err.(interface{ Unwrap() []error }); ok {
+					unwrapped = ug.Unwrap()
+				} else {
+					unwrapped = []error{err}
+				}
+				peer.Log.Info("errors encountered loading bloom filters", zap.Errors("errs", unwrapped))
+			}
+
+			queueRetain = peer.Storage2.BloomFilterManager
+
+			hsb := piecestore.NewHashStoreBackend(
+				dir,
+				peer.Storage2.BloomFilterManager,
+				peer.Storage2.RestoreTimeManager,
+				process.NamedLog(peer.Log, "hashstore"),
+			)
+			mon.Chain(hsb)
+
+			pieceBackend = hsb
+
+		default:
+			queueRetain = peer.Storage2.RetainService
+			pieceBackend = piecestore.NewOldPieceBackend(
+				peer.Storage2.Store,
+				peer.Storage2.TrashChore,
+				peer.Storage2.Monitor,
+			)
+		}
 
 		peer.Storage2.Endpoint, err = piecestore.NewEndpoint(
 			process.NamedLog(peer.Log, "piecestore"),
 			peer.Identity,
 			peer.Storage2.Trust,
 			peer.Storage2.Monitor,
-			peer.Storage2.RetainService,
+			queueRetain,
 			peer.Contact.PingStats,
 			pieceBackend,
 			peer.OrdersStore,

@@ -38,7 +38,6 @@ import (
 	"storj.io/storj/storagenode/monitor"
 	"storj.io/storj/storagenode/orders"
 	"storj.io/storj/storagenode/orders/ordersfile"
-	"storj.io/storj/storagenode/pieces"
 	"storj.io/storj/storagenode/piecestore/usedserials"
 	"storj.io/storj/storagenode/retain"
 	"storj.io/storj/storagenode/trust"
@@ -73,6 +72,7 @@ type Config struct {
 	RetainTimeBuffer        time.Duration `help:"allows for small differences in the satellite and storagenode clocks" default:"48h0m0s" deprecated:"true"`
 	ReportCapacityThreshold memory.Size   `help:"threshold below which to immediately notify satellite of capacity" default:"5GB" hidden:"true"`
 	MaxUsedSerialsSize      memory.Size   `help:"amount of memory allowed for used serials store - once surpassed, serials will be dropped at random" default:"1MB"`
+	PieceBackend            string        `help:"piece backend to use." default:""`
 
 	MinUploadSpeed                    memory.Size   `help:"a client upload speed should not be lower than MinUploadSpeed in bytes-per-second (E.g: 1Mb), otherwise, it will be flagged as slow-connection and potentially be closed" default:"0Mb"`
 	MinUploadSpeedGraceDuration       time.Duration `help:"if MinUploadSpeed is configured, after a period of time after the client initiated the upload, the server will flag unusually slow upload client" default:"0h0m10s"`
@@ -98,13 +98,14 @@ type Endpoint struct {
 	log    *zap.Logger
 	config Config
 
-	ident     *identity.FullIdentity
-	trust     *trust.Pool
-	monitor   *monitor.Service
-	retain    QueueRetain
+	ident   *identity.FullIdentity
+	trust   *trust.Pool
+	monitor *monitor.Service
+	retain  QueueRetain
+	bfm     *retain.BloomFilterManager
+
 	pingStats PingStatsSource
 
-	store       *pieces.Store
 	usage       bandwidth.Writer
 	ordersStore *orders.FileStore
 	usedSerials *usedserials.Table
@@ -127,7 +128,8 @@ type RestoreTrash interface {
 }
 
 // NewEndpoint creates a new piecestore endpoint.
-func NewEndpoint(log *zap.Logger, ident *identity.FullIdentity, trust *trust.Pool, monitor *monitor.Service, retain QueueRetain, pingStats PingStatsSource, pieceBackend PieceBackend, ordersStore *orders.FileStore, usage bandwidth.Writer, usedSerials *usedserials.Table, config Config) (*Endpoint, error) {
+func NewEndpoint(log *zap.Logger, ident *identity.FullIdentity, trust *trust.Pool, monitor *monitor.Service, retain QueueRetain, pingStats PingStatsSource, pieceBackend PieceBackend, ordersStore *orders.FileStore, usage bandwidth.DB, usedSerials *usedserials.Table, config Config) (*Endpoint, error) {
+
 	return &Endpoint{
 		log:    log,
 		config: config,

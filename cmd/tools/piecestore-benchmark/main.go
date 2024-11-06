@@ -65,6 +65,8 @@ var (
 	flatFileTTLHandles = flag.Int("flat-ttl-max-handles", 1000, "max file handles to flat-file ttl store")
 	dedicatedDisk      = flag.Bool("dedicated-disk", false, "assume the test setup is a dedicated disk node")
 
+	backend = flag.String("backend", "", "empty|hash|hashstore")
+
 	cpuprofile = flag.String("cpuprofile", "", "write a cpu profile")
 	memprofile = flag.String("memprofile", "", "write a memory profile")
 	notrace    = flag.Bool("notrace", false, "disable tracing")
@@ -170,7 +172,19 @@ func createEndpoint(ctx context.Context, satIdent, snIdent *identity.FullIdentit
 
 	bandwidthdbCache := bandwidth.NewCache(snDB.Bandwidth())
 
-	endpoint := try.E1(piecestore.NewEndpoint(log, snIdent, trustPool, monitorService, retainService, new(contact.PingStats), piecestore.NewOldPieceBackend(piecesStore, trashChore, monitorService), ordersStore, bandwidthdbCache, usedSerials, cfg.Storage2))
+	bfm := try.E1(retain.NewBloomFilterManager("bfm"))
+
+	var pieceBackend piecestore.PieceBackend
+	switch *backend {
+	case "hashstore", "hash":
+		rtm := retain.NewRestoreTimeManager("rtm")
+		hsb := piecestore.NewHashStoreBackend("hashstore", bfm, rtm, log)
+		mon.Chain(hsb)
+		pieceBackend = hsb
+	default:
+		pieceBackend = piecestore.NewOldPieceBackend(piecesStore, trashChore, monitorService)
+	}
+	endpoint := try.E1(piecestore.NewEndpoint(zap.NewNop(), snIdent, trustPool, monitorService, retainService, bfm, new(contact.PingStats), pieceBackend, ordersStore, bandwidthdbCache, usedSerials, cfg.Storage2))
 
 	collectorService := collector.NewService(log, piecesStore, usedSerials, collector.Config{Interval: 1000 * time.Hour})
 

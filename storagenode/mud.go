@@ -321,12 +321,16 @@ func Module(ball *mud.Ball) {
 			return pieces.NewTrashRunOnce(log, blobs, trashExpiryInterval, stop)
 		})
 
-		mud.RegisterInterfaceImplementation[piecestore.RestoreTrash, *pieces.TrashChore](ball)
 		mud.RegisterInterfaceImplementation[piecestore.QueueRetain, *retain.Service](ball)
 
 		mud.Provide[*piecestore.OldPieceBackend](ball, piecestore.NewOldPieceBackend)
 		mud.RegisterInterfaceImplementation[piecestore.PieceBackend, *piecestore.OldPieceBackend](ball)
-
+		mud.Provide[*piecestore.HashStoreBackend](ball, func(cfg piecestore.OldConfig, bfm *retain.BloomFilterManager, rtm *retain.RestoreTimeManager, log *zap.Logger) *piecestore.HashStoreBackend {
+			dir := filepath.Join(cfg.Path, "hashstore")
+			backend := piecestore.NewHashStoreBackend(dir, bfm, rtm, log)
+			mon.Chain(backend)
+			return backend
+		})
 		mud.Provide[*retain.BloomFilterManager](ball, func(cfg piecestore.OldConfig) (*retain.BloomFilterManager, error) {
 			return retain.NewBloomFilterManager(cfg.Path)
 		})
