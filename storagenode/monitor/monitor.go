@@ -104,62 +104,64 @@ func (service *Service) Run(ctx context.Context) (err error) {
 	defer mon.Task()(&ctx)(&err)
 
 	group, ctx := errgroup.WithContext(ctx)
-	group.Go(func() error {
-		timeout := service.Config.VerifyDirReadableTimeout
-		return service.VerifyDirReadableLoop.Run(ctx, func(ctx context.Context) error {
-			startTime := time.Now()
-			err := service.verifier.VerifyStorageDirWithTimeout(ctx, service.contact.Local().ID, timeout)
-			duration := time.Since(startTime)
-			if err != nil {
-				if errs2.IsCanceled(err) {
-					return nil
-				}
-				if errs.Is(err, context.DeadlineExceeded) {
-					if service.Config.VerifyDirWarnOnly {
-						service.log.Error("timed out while verifying readability of storage directory", zap.Duration("timeout", timeout))
+	if service.verifier != nil {
+		group.Go(func() error {
+			timeout := service.Config.VerifyDirReadableTimeout
+			return service.VerifyDirReadableLoop.Run(ctx, func(ctx context.Context) error {
+				startTime := time.Now()
+				err := service.verifier.VerifyStorageDirWithTimeout(ctx, service.contact.Local().ID, timeout)
+				duration := time.Since(startTime)
+				if err != nil {
+					if errs2.IsCanceled(err) {
 						return nil
 					}
-					return Error.New("timed out after %v while verifying readability of storage directory", timeout)
-				}
-				if service.Config.VerifyDirWarnOnly {
-					service.log.Error("error verifying location and/or readability of storage directory", zap.Error(err))
-					return nil
-				}
-				return Error.New("error verifying location and/or readability of storage directory: %v", err)
-			}
-			service.log.Debug("readability check done", zap.Duration("Duration", duration))
-			mon.DurationVal("readability_check").Observe(duration)
-			return nil
-		})
-	})
-	group.Go(func() error {
-		timeout := service.Config.VerifyDirWritableTimeout
-		return service.VerifyDirWritableLoop.Run(ctx, func(ctx context.Context) error {
-			startTime := time.Now()
-			err := service.verifier.CheckWritabilityWithTimeout(ctx, timeout)
-			duration := time.Since(startTime)
-			if err != nil {
-				if errs2.IsCanceled(err) {
-					return nil
-				}
-				if errs.Is(err, context.DeadlineExceeded) {
+					if errs.Is(err, context.DeadlineExceeded) {
+						if service.Config.VerifyDirWarnOnly {
+							service.log.Error("timed out while verifying readability of storage directory", zap.Duration("timeout", timeout))
+							return nil
+						}
+						return Error.New("timed out after %v while verifying readability of storage directory", timeout)
+					}
 					if service.Config.VerifyDirWarnOnly {
-						service.log.Error("timed out while verifying writability of storage directory", zap.Duration("timeout", timeout))
+						service.log.Error("error verifying location and/or readability of storage directory", zap.Error(err))
 						return nil
 					}
-					return Error.New("timed out after %v while verifying writability of storage directory", timeout)
+					return Error.New("error verifying location and/or readability of storage directory: %v", err)
 				}
-				if service.Config.VerifyDirWarnOnly {
-					service.log.Error("error verifying writability of storage directory", zap.Error(err))
-					return nil
-				}
-				return Error.New("error verifying writability of storage directory: %v", err)
-			}
-			service.log.Debug("writability check done", zap.Duration("Duration", duration))
-			mon.DurationVal("writability_check").Observe(duration)
-			return nil
+				service.log.Debug("readability check done", zap.Duration("Duration", duration))
+				mon.DurationVal("readability_check").Observe(duration)
+				return nil
+			})
 		})
-	})
+		group.Go(func() error {
+			timeout := service.Config.VerifyDirWritableTimeout
+			return service.VerifyDirWritableLoop.Run(ctx, func(ctx context.Context) error {
+				startTime := time.Now()
+				err := service.verifier.CheckWritabilityWithTimeout(ctx, timeout)
+				duration := time.Since(startTime)
+				if err != nil {
+					if errs2.IsCanceled(err) {
+						return nil
+					}
+					if errs.Is(err, context.DeadlineExceeded) {
+						if service.Config.VerifyDirWarnOnly {
+							service.log.Error("timed out while verifying writability of storage directory", zap.Duration("timeout", timeout))
+							return nil
+						}
+						return Error.New("timed out after %v while verifying writability of storage directory", timeout)
+					}
+					if service.Config.VerifyDirWarnOnly {
+						service.log.Error("error verifying writability of storage directory", zap.Error(err))
+						return nil
+					}
+					return Error.New("error verifying writability of storage directory: %v", err)
+				}
+				service.log.Debug("writability check done", zap.Duration("Duration", duration))
+				mon.DurationVal("writability_check").Observe(duration)
+				return nil
+			})
+		})
+	}
 	group.Go(func() error {
 		return service.Loop.Run(ctx, func(ctx context.Context) error {
 			err := service.updateNodeInformation(ctx)
@@ -205,6 +207,7 @@ func (service *Service) updateNodeInformation(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
+
 	service.contact.UpdateSelf(&pb.NodeCapacity{
 		FreeDisk: freeSpace,
 	})
