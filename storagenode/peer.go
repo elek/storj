@@ -655,6 +655,8 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB, revocationDB exten
 			Close: peer.OrdersStore.Close,
 		})
 
+		pieceBackend := piecestore.NewOldPieceBackend(peer.Storage2.Store, peer.Storage2.TrashChore, peer.Storage2.Monitor)
+
 		peer.Storage2.Endpoint, err = piecestore.NewEndpoint(
 			process.NamedLog(peer.Log, "piecestore"),
 			peer.Identity,
@@ -662,8 +664,7 @@ func New(log *zap.Logger, full *identity.FullIdentity, db DB, revocationDB exten
 			peer.Storage2.Monitor,
 			peer.Storage2.RetainService,
 			peer.Contact.PingStats,
-			peer.Storage2.Store,
-			peer.Storage2.TrashChore,
+			pieceBackend,
 			peer.OrdersStore,
 			peer.Bandwidth.Cache,
 			peer.UsedSerials,

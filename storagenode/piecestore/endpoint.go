@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"net"
 	"reflect"
 	"runtime/trace"
@@ -106,10 +105,11 @@ type Endpoint struct {
 	pingStats PingStatsSource
 
 	store       *pieces.Store
-	trashChore  RestoreTrash
 	usage       bandwidth.Writer
 	ordersStore *orders.FileStore
 	usedSerials *usedserials.Table
+
+	pieceBackend PieceBackend
 
 	liveRequests int32
 }
@@ -127,7 +127,7 @@ type RestoreTrash interface {
 }
 
 // NewEndpoint creates a new piecestore endpoint.
-func NewEndpoint(log *zap.Logger, ident *identity.FullIdentity, trust *trust.Pool, monitor *monitor.Service, retain QueueRetain, pingStats PingStatsSource, store *pieces.Store, trashChore RestoreTrash, ordersStore *orders.FileStore, usage bandwidth.Writer, usedSerials *usedserials.Table, config Config) (*Endpoint, error) {
+func NewEndpoint(log *zap.Logger, ident *identity.FullIdentity, trust *trust.Pool, monitor *monitor.Service, retain QueueRetain, pingStats PingStatsSource, pieceBackend PieceBackend, ordersStore *orders.FileStore, usage bandwidth.Writer, usedSerials *usedserials.Table, config Config) (*Endpoint, error) {
 	return &Endpoint{
 		log:    log,
 		config: config,
@@ -138,11 +138,11 @@ func NewEndpoint(log *zap.Logger, ident *identity.FullIdentity, trust *trust.Poo
 		retain:    retain,
 		pingStats: pingStats,
 
-		store:       store,
-		trashChore:  trashChore,
 		ordersStore: ordersStore,
 		usage:       usage,
 		usedSerials: usedSerials,
+
+		pieceBackend: pieceBackend,
 
 		liveRequests: 0,
 	}, nil
@@ -273,7 +273,7 @@ func (endpoint *Endpoint) Upload(stream pb.DRPCPiecestore_UploadStream) (err err
 		zap.Stringer("Action", limit.Action),
 		zap.String("Remote Address", getRemoteAddr(ctx)))
 
-	var pieceWriter *pieces.Writer
+	var pieceWriter PieceWriter
 	// committed is set to true when the piece is committed.
 	// It is used to distinguish successful pieces where the uplink cancels the connections,
 	// and pieces that were actually canceled before being completed.
@@ -325,7 +325,7 @@ func (endpoint *Endpoint) Upload(stream pb.DRPCPiecestore_UploadStream) (err err
 	log.Debug("upload started", zap.Int64("Available Space", availableSpace))
 	mon.Counter("upload_started_count").Inc(1)
 
-	pieceWriter, err = endpoint.store.Writer(ctx, limit.SatelliteId, limit.PieceId, hashAlgorithm)
+	pieceWriter, err = endpoint.pieceBackend.Writer(ctx, limit.SatelliteId, limit.PieceId, hashAlgorithm, limit.PieceExpiration)
 	if err != nil {
 		endpoint.log.Error("upload internal error", zap.Error(err))
 		return rpcstatus.Wrap(rpcstatus.Internal, err)
@@ -430,12 +430,6 @@ func (endpoint *Endpoint) Upload(stream pb.DRPCPiecestore_UploadStream) (err err
 				return true, rpcstatus.Wrap(rpcstatus.Internal, err)
 			}
 			committed = true
-			if !limit.PieceExpiration.IsZero() {
-				if err := endpoint.store.SetExpiration(ctx, limit.SatelliteId, limit.PieceId, limit.PieceExpiration, pieceWriter.Size()); err != nil {
-					endpoint.log.Error("upload internal error", zap.Error(err))
-					return true, rpcstatus.Wrap(rpcstatus.Internal, err)
-				}
-			}
 		}
 
 		storageNodeHash, err := signing.SignPieceHash(ctx, signing.SignerFromFullIdentity(endpoint.ident), &pb.PieceHash{
@@ -597,7 +591,7 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 		return err
 	}
 
-	var pieceReader *pieces.Reader
+	var pieceReader PieceReader
 	downloadedBytes := make(chan int64, 1)
 	largestOrder := pb.Order{}
 	defer func() {
@@ -669,30 +663,9 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 	}()
 
 	restoredFromTrash := false
-	pieceReader, err = endpoint.store.Reader(ctx, limit.SatelliteId, limit.PieceId)
+	pieceReader, err = endpoint.pieceBackend.Reader(ctx, limit.SatelliteId, limit.PieceId)
 	if err != nil {
-		if !errs.Is(err, fs.ErrNotExist) {
-			return rpcstatus.Wrap(rpcstatus.Internal, err)
-		}
-
-		// check if the file is in trash, if so, restore it and
-		// continue serving the download request.
-		tryRestoreErr := endpoint.store.TryRestoreTrashPiece(ctx, limit.SatelliteId, limit.PieceId)
-		if tryRestoreErr != nil {
-			endpoint.monitor.VerifyDirReadableLoop.TriggerWait()
-			// we want to return the original "file does not exist" error to the rpc client
-			return rpcstatus.Wrap(rpcstatus.NotFound, err)
-		}
-		restoredFromTrash = true
-		mon.Meter("download_file_in_trash", monkit.NewSeriesTag("namespace", limit.SatelliteId.String())).Mark(1)
-		filestore.MonFileInTrash(limit.SatelliteId[:]).Mark(1)
-		log.Warn("file found in trash")
-
-		// try to open the file again
-		pieceReader, err = endpoint.store.Reader(ctx, limit.SatelliteId, limit.PieceId)
-		if err != nil {
-			return rpcstatus.Wrap(rpcstatus.Internal, err)
-		}
+		return err
 	}
 	defer func() {
 		err := pieceReader.Close() // similarly how transcation Rollback works
@@ -704,11 +677,17 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 			log.Error("failed to close piece reader", zap.Error(err))
 		}
 	}()
+	if pieceReader.Trash() {
+		restoredFromTrash = true
+		mon.Meter("download_file_in_trash", monkit.NewSeriesTag("namespace", limit.SatelliteId.String())).Mark(1)
+		filestore.MonFileInTrash(limit.SatelliteId[:]).Mark(1)
+		log.Warn("file found in trash")
+	}
 
 	// for repair traffic, send along the PieceHash and original OrderLimit for validation
 	// before sending the piece itself
 	if message.Limit.Action == pb.PieceAction_GET_REPAIR {
-		pieceHash, orderLimit, err := endpoint.store.GetHashAndLimit(ctx, limit.SatelliteId, limit.PieceId, pieceReader)
+		pieceHash, orderLimit, err := pieceReader.GetHashAndLimit(ctx)
 		if err != nil {
 			log.Error("could not get hash and order limit", zap.Error(err))
 			return rpcstatus.Wrap(rpcstatus.Internal, err)
@@ -847,7 +826,7 @@ func (endpoint *Endpoint) Download(stream pb.DRPCPiecestore_DownloadStream) (err
 	return rpcstatus.Wrap(rpcstatus.Internal, errs.Combine(sendErr, recvErr))
 }
 
-func (endpoint *Endpoint) sendData(ctx context.Context, log *zap.Logger, stream pb.DRPCPiecestore_DownloadStream, pieceReader *pieces.Reader, currentOffset int64, chunkSize int64) (result bool, err error) {
+func (endpoint *Endpoint) sendData(ctx context.Context, log *zap.Logger, stream pb.DRPCPiecestore_DownloadStream, pieceReader PieceReader, currentOffset int64, chunkSize int64) (result bool, err error) {
 	defer mon.Task()(&ctx)(&err)
 
 	cancelStream, ok := getCanceler(stream)
@@ -947,7 +926,7 @@ func (endpoint *Endpoint) RestoreTrash(ctx context.Context, restoreTrashReq *pb.
 		return nil, rpcstatus.Error(rpcstatus.PermissionDenied, "RestoreTrash called with untrusted ID")
 	}
 
-	err = endpoint.trashChore.StartRestore(ctx, peer.ID)
+	err = endpoint.pieceBackend.StartRestore(ctx, peer.ID)
 	if err != nil {
 		return nil, rpcstatus.Error(rpcstatus.Internal, "failed to start restore")
 	}

@@ -169,7 +169,9 @@ func createEndpoint(ctx context.Context, satIdent, snIdent *identity.FullIdentit
 	usedSerials := usedserials.NewTable(cfg.Storage2.MaxUsedSerialsSize)
 
 	bandwidthdbCache := bandwidth.NewCache(snDB.Bandwidth())
-	endpoint := try.E1(piecestore.NewEndpoint(log, snIdent, trustPool, monitorService, retainService, new(contact.PingStats), piecesStore, trashChore, ordersStore, bandwidthdbCache, usedSerials, cfg.Storage2))
+
+	endpoint := try.E1(piecestore.NewEndpoint(log, snIdent, trustPool, monitorService, retainService, new(contact.PingStats), piecestore.NewOldPieceBackend(piecesStore, trashChore, monitorService), ordersStore, bandwidthdbCache, usedSerials, cfg.Storage2))
+
 	collectorService := collector.NewService(log, piecesStore, usedSerials, collector.Config{Interval: 1000 * time.Hour})
 
 	return endpoint, collectorService
