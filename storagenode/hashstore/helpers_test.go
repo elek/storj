@@ -24,7 +24,7 @@ import (
 
 type testHashTbl struct {
 	t testing.TB
-	*hashTbl
+	*HashTbl
 }
 
 func newTestHashtbl(t testing.TB, lrec uint64) *testHashTbl {
@@ -33,27 +33,27 @@ func newTestHashtbl(t testing.TB, lrec uint64) *testHashTbl {
 	fh, err := os.CreateTemp(t.TempDir(), "hashtbl")
 	assert.NoError(t, err)
 
-	h, err := createHashtbl(fh, lrec, 0)
+	h, err := CreateHashtbl(fh, lrec, 0)
 	assert.NoError(t, err)
 
-	return &testHashTbl{t: t, hashTbl: h}
+	return &testHashTbl{t: t, HashTbl: h}
 }
 
 func (th *testHashTbl) AssertReopen() {
 	th.t.Helper()
 
-	th.hashTbl.Close()
+	th.HashTbl.Close()
 
 	fh, err := os.Open(th.fh.Name())
 	assert.NoError(th.t, err)
 
-	h, err := openHashtbl(fh)
+	h, err := OpenHashtbl(fh)
 	assert.NoError(th.t, err)
 
-	th.hashTbl = h
+	th.HashTbl = h
 }
 
-func (th *testHashTbl) AssertInsertRecord(rec record) {
+func (th *testHashTbl) AssertInsertRecord(rec Record) {
 	th.t.Helper()
 
 	ok, err := th.Insert(rec)
@@ -61,7 +61,7 @@ func (th *testHashTbl) AssertInsertRecord(rec record) {
 	assert.True(th.t, ok)
 }
 
-func (th *testHashTbl) AssertInsert() record {
+func (th *testHashTbl) AssertInsert() Record {
 	th.t.Helper()
 
 	rec := newRecord(newKey())
@@ -69,7 +69,7 @@ func (th *testHashTbl) AssertInsert() record {
 	return rec
 }
 
-func (th *testHashTbl) AssertLookup(k Key) record {
+func (th *testHashTbl) AssertLookup(k Key) Record {
 	th.t.Helper()
 
 	r, ok, err := th.Lookup(k)
@@ -241,15 +241,15 @@ func newKey() (k Key) {
 	return
 }
 
-func newRecord(k Key) record {
+func newRecord(k Key) Record {
 	n := binary.BigEndian.Uint32(k[28:32])
-	rec := record{
-		key:     k,
-		offset:  uint64(n),
-		log:     uint64(n),
-		length:  n,
-		created: n & 0xffffff,
-		expires: newExpiration(n&0x7fffff, n%2 == 0),
+	rec := Record{
+		Key:     k,
+		Offset:  uint64(n),
+		Log:     uint64(n),
+		Length:  n,
+		Created: n & 0xffffff,
+		Expires: newExpiration(n&0x7fffff, n%2 == 0),
 	}
 	rec.setChecksum()
 	return rec

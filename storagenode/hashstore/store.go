@@ -56,7 +56,7 @@ type store struct {
 
 	rmu sync.RWMutex                // protects consistency of lfs and tbl
 	lfs atomicMap[uint64, *logFile] // all log files
-	tbl *hashTbl                    // hash table of records
+	tbl *HashTbl                    // hash table of records
 }
 
 func newStore(dir string, log *zap.Logger) (_ *store, err error) {
@@ -146,7 +146,7 @@ func newStore(dir string, log *zap.Logger) (_ *store, err error) {
 			}
 			defer af.Cancel()
 
-			ntbl, err := createHashtbl(af.File, store_minTableSize, s.today())
+			ntbl, err := CreateHashtbl(af.File, store_minTableSize, s.today())
 			if err != nil {
 				return errs.Wrap(err)
 			}
@@ -169,7 +169,7 @@ func newStore(dir string, log *zap.Logger) (_ *store, err error) {
 	}
 
 	// set up the hash table to use the handle.
-	s.tbl, err = openHashtbl(fh)
+	s.tbl, err = OpenHashtbl(fh)
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
@@ -306,7 +306,7 @@ func (s *store) acquireLogFile() (*logFile, error) {
 	return s.createLogFile()
 }
 
-func (s *store) addRecord(rec record) error {
+func (s *store) addRecord(rec Record) error {
 	// sometimes a Writer is created with a nil store so that it can disable automatically writing
 	// records.
 	if s == nil {
@@ -397,12 +397,12 @@ func (s *store) writerForKey(key Key, expires time.Time) (*Writer, error) {
 	}
 
 	// return the writer for the piece.
-	return newWriter(s, lf, record{
-		key:     key,
-		offset:  lf.size,
-		log:     lf.id,
-		created: s.today(),
-		expires: exp,
+	return newWriter(s, lf, Record{
+		Key:     key,
+		Offset:  lf.size,
+		Log:     lf.id,
+		Created: s.today(),
+		Expires: exp,
 	}), nil
 }
 
@@ -430,8 +430,8 @@ func (s *store) Read(ctx context.Context, key Key) (*Reader, error) {
 	}
 }
 
-func (s *store) readerForRecord(ctx context.Context, rec record, revive bool) (*Reader, error) {
-	lf, ok := s.lfs.Lookup(rec.log)
+func (s *store) readerForRecord(ctx context.Context, rec Record, revive bool) (*Reader, error) {
+	lf, ok := s.lfs.Lookup(rec.Log)
 	if !ok {
 		return nil, errs.New("record points to unknown log file rec=%v", rec)
 	}
@@ -439,7 +439,7 @@ func (s *store) readerForRecord(ctx context.Context, rec record, revive bool) (*
 		return nil, errs.New("unable to acquire log file for reading rec=%v", rec)
 	}
 
-	if revive && rec.expires.trash() {
+	if revive && rec.Expires.trash() {
 		s.log.Warn("trashed record was read",
 			zap.String("record", rec.String()),
 		)
@@ -455,7 +455,7 @@ func (s *store) readerForRecord(ctx context.Context, rec record, revive bool) (*
 	return newLogReader(lf, rec), nil
 }
 
-func (s *store) reviveRecord(ctx context.Context, lf *logFile, rec record) (err error) {
+func (s *store) reviveRecord(ctx context.Context, lf *logFile, rec Record) (err error) {
 	defer mon.Task()(&ctx)(&err)
 
 	// we don't want to respect cancelling if the reader for the trashed piece goes away. we know it
@@ -473,7 +473,7 @@ func (s *store) reviveRecord(ctx context.Context, lf *logFile, rec record) (err 
 	if s.compactMu.TryLock() {
 		defer s.compactMu.Unlock()
 
-		rec.expires = 0
+		rec.Expires = 0
 		return s.addRecord(rec)
 	}
 
@@ -493,7 +493,7 @@ func (s *store) reviveRecord(ctx context.Context, lf *logFile, rec record) (err 
 	// 1. acquire a write slot, ensuring that no compaction is ongoing and we can write to a log if
 	// necessary. once we have a writer, we know the state of the hash table and logs can only be
 	// added to.
-	w, err := s.Create(ctx, rec.key, time.Time{})
+	w, err := s.Create(ctx, rec.Key, time.Time{})
 	if err != nil {
 		return errs.Wrap(err)
 	}
@@ -503,12 +503,12 @@ func (s *store) reviveRecord(ctx context.Context, lf *logFile, rec record) (err 
 	// happy. as noted in 1, we're safe to do a lookup into s.tbl here even without the rmu held
 	// because we know no compaction is ongoing due to having a writer acquired, and compaction is
 	// the only thing that does more than just add to the hash table.
-	if tmp, ok, err := s.tbl.Lookup(rec.key); err == nil && ok {
-		if tmp.expires == 0 {
+	if tmp, ok, err := s.tbl.Lookup(rec.Key); err == nil && ok {
+		if tmp.Expires == 0 {
 			return nil
 		}
 
-		tmp.expires = 0
+		tmp.Expires = 0
 		return s.addRecord(tmp)
 	}
 
@@ -604,7 +604,7 @@ func (s *store) Compact(
 	nset := uint64(0)
 	used := make(map[uint64]uint64)
 	rerr := error(nil)
-	s.tbl.Range(func(rec record, err error) bool {
+	s.tbl.Range(func(rec Record, err error) bool {
 		rerr = func() error {
 			if err != nil {
 				return errs.Wrap(err)
@@ -612,12 +612,12 @@ func (s *store) Compact(
 				return err
 			}
 
-			if expired(rec.expires) {
+			if expired(rec.Expires) {
 				return nil
 			}
 
 			nset++
-			used[rec.log] += uint64(rec.length) + rSize // rSize for the record footer
+			used[rec.Log] += uint64(rec.Length) + rSize // rSize for the record footer
 			return nil
 		}()
 		return rerr == nil
@@ -660,7 +660,7 @@ func (s *store) Compact(
 	}
 	defer af.Cancel()
 
-	ntbl, err := createHashtbl(af.File, lrec, today)
+	ntbl, err := CreateHashtbl(af.File, lrec, today)
 	if err != nil {
 		return errs.Wrap(err)
 	}
@@ -670,7 +670,7 @@ func (s *store) Compact(
 
 	// copy all of the entries from the hash table to the new table, skipping expired entries, and
 	// rewriting any entries that are in logs marked for compaction.
-	s.tbl.Range(func(rec record, err error) bool {
+	s.tbl.Range(func(rec Record, err error) bool {
 		rerr = func() error {
 			if err != nil {
 				return errs.Wrap(err)
@@ -679,17 +679,17 @@ func (s *store) Compact(
 			}
 
 			// if the record is restored, clear the expiration.
-			if restored(rec.expires) {
-				rec.expires = 0
+			if restored(rec.Expires) {
+				rec.Expires = 0
 
 				// we bump created so that the shouldTrash callback likely ignores it in case the
 				// bloom filter was bad or something. this may change once the hashstore is more
 				// integrated with the system and it has more details about the bloom filter.
-				rec.created = today
+				rec.Created = today
 			}
 
 			// totally ignore any expired records.
-			if expired(rec.expires) {
+			if expired(rec.Expires) {
 				return nil
 			}
 
@@ -697,19 +697,19 @@ func (s *store) Compact(
 			// signal if they are read that there was a problem. we only check records that are not
 			// already flagged as trashed and keep the minimum time for the record to live. we do
 			// this after compaction so that we don't mistakenly count it as a "revive".
-			if !rec.expires.trash() && shouldTrash != nil {
-				if shouldTrash(ctx, rec.key, dateToTime(rec.created)) {
+			if !rec.Expires.trash() && shouldTrash != nil {
+				if shouldTrash(ctx, rec.Key, dateToTime(rec.Created)) {
 					expiresTime := today + compaction_ExpiresDays
 					// if we have an existing ttl time and it's smaller, use that instead.
-					if existingTime := rec.expires.time(); existingTime > 0 && existingTime < expiresTime {
+					if existingTime := rec.Expires.time(); existingTime > 0 && existingTime < expiresTime {
 						expiresTime = existingTime
 					}
-					rec.expires = newExpiration(expiresTime, true)
+					rec.Expires = newExpiration(expiresTime, true)
 				}
 			}
 
 			// if the record is compacted, copy it into the new log file.
-			if compact[rec.log] {
+			if compact[rec.Log] {
 				err := func() error {
 					r, err := s.readerForRecord(ctx, rec, false)
 					if err != nil {
@@ -728,12 +728,12 @@ func (s *store) Compact(
 					// create a Writer to handle writing the entry into the log file. the store is
 					// nil so that the Writer does not replace the log file or commit the record
 					// automatically on Close.
-					w := newWriter(nil, into, record{
-						key:     rec.key,
-						offset:  into.size,
-						log:     into.id,
-						created: rec.created,
-						expires: rec.expires,
+					w := newWriter(nil, into, Record{
+						Key:     rec.Key,
+						Offset:  into.size,
+						Log:     into.id,
+						Created: rec.Created,
+						Expires: rec.Expires,
 					})
 					defer w.Cancel()
 

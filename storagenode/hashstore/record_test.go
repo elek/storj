@@ -39,7 +39,7 @@ func TestRecord_MaxExpiration(t *testing.T) {
 func TestPage_BasicOperation(t *testing.T) {
 	var p page
 
-	var recs []record
+	var recs []Record
 	for i := uint64(0); i < rPerP; i++ {
 		rec := newRecord(newKey())
 		recs = append(recs, rec)
@@ -47,7 +47,7 @@ func TestPage_BasicOperation(t *testing.T) {
 	}
 
 	for i := uint64(0); i < rPerP; i++ {
-		var tmp record
+		var tmp Record
 		p.readRecord(i, &tmp)
 		assert.Equal(t, tmp, recs[i])
 	}
@@ -60,8 +60,8 @@ func TestPage_BasicOperation(t *testing.T) {
 func BenchmarkChecksum(b *testing.B) {
 	b.ReportAllocs()
 
-	var rec record
-	h := rec.checksum
+	var rec Record
+	h := rec.Checksum
 	for i := 0; i < b.N; i++ {
 		h += rec.computeChecksum()
 	}

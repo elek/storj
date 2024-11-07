@@ -19,13 +19,13 @@ const (
 
 type page [pSize]byte
 
-func (p *page) readRecord(n uint64, rec *record) {
+func (p *page) readRecord(n uint64, rec *Record) {
 	if b := p[(n*rSize)%pSize:]; len(b) >= rSize {
 		rec.read((*[rSize]byte)(b))
 	}
 }
 
-func (p *page) writeRecord(n uint64, rec record) {
+func (p *page) writeRecord(n uint64, rec Record) {
 	if b := p[(n*rSize)%pSize:]; len(b) >= rSize {
 		rec.write((*[rSize]byte)(b))
 	}
@@ -61,34 +61,34 @@ func maxExpiration(a, b expiration) expiration {
 	return b
 }
 
-type record struct {
-	key      Key        // 256 bits (32b) of key
-	offset   uint64     // 48  bits (6b) of offset (256TB max file size)
-	log      uint64     // 64  bits (8b) of log id (effectively unlimited number of logs)
-	length   uint32     // 32  bits (4b) of length (4GB max piece size)
-	created  uint32     // 24  bits (3b) of days since epoch (~45900 years)
-	expires  expiration // 23  bits (3b) of days since epoch (~22900 years), 1 bit flag for trash
-	checksum uint64     // 63  bits (8b) of checksum, 1 bit flag reserved
+type Record struct {
+	Key      Key        // 256 bits (32b) of key
+	Offset   uint64     // 48  bits (6b) of offset (256TB max file size)
+	Log      uint64     // 64  bits (8b) of log id (effectively unlimited number of logs)
+	Length   uint32     // 32  bits (4b) of length (4GB max piece size)
+	Created  uint32     // 24  bits (3b) of days since epoch (~45900 years)
+	Expires  expiration // 23  bits (3b) of days since epoch (~22900 years), 1 bit flag for trash
+	Checksum uint64     // 63  bits (8b) of checksum, 1 bit flag reserved
 }
 
-func (r record) String() string {
+func (r Record) String() string {
 	return fmt.Sprintf(
 		"{key:%v offset:%d log:%d length:%d created:%d expires:%d trash:%v checksum:%x}",
-		r.key, r.offset, r.log, r.length, r.created, r.expires.time(), r.expires.trash(), r.checksum,
+		r.Key, r.Offset, r.Log, r.Length, r.Created, r.Expires.time(), r.Expires.trash(), r.Checksum,
 	)
 }
 
-func recordsEqualish(a, b record) bool {
-	a.expires, a.checksum = 0, 0
-	b.expires, b.checksum = 0, 0
+func recordsEqualish(a, b Record) bool {
+	a.Expires, a.Checksum = 0, 0
+	b.Expires, b.Checksum = 0, 0
 	return a == b
 }
 
-func (r *record) index() uint64 { return keyIndex(&r.key) }
+func (r *Record) index() uint64 { return keyIndex(&r.Key) }
 
-func (r *record) validChecksum() bool { return r.checksum == r.computeChecksum() }
-func (r *record) setChecksum()        { r.checksum = r.computeChecksum() }
-func (r *record) computeChecksum() uint64 {
+func (r *Record) validChecksum() bool { return r.Checksum == r.computeChecksum() }
+func (r *Record) setChecksum()        { r.Checksum = r.computeChecksum() }
+func (r *Record) computeChecksum() uint64 {
 	var buf [rSize]byte
 	r.write(&buf)
 
@@ -96,22 +96,22 @@ func (r *record) computeChecksum() uint64 {
 	return xxh3.Hash(buf[:56]) >> 1
 }
 
-func (r *record) write(buf *[rSize]byte) {
-	*(*Key)(buf[0:32]) = r.key
-	binary.LittleEndian.PutUint64(buf[32:32+8], r.offset&0xffffffffffff)
-	binary.LittleEndian.PutUint64(buf[38:38+8], r.log&0xffffffffffffffff)
-	binary.LittleEndian.PutUint32(buf[46:46+4], r.length&0xffffffff)
-	binary.LittleEndian.PutUint32(buf[50:50+4], r.created&0xffffff)
-	binary.LittleEndian.PutUint32(buf[53:53+4], uint32(r.expires)&0xffffff)
-	binary.LittleEndian.PutUint64(buf[56:56+8], r.checksum&0xffffffffffffffff)
+func (r *Record) write(buf *[rSize]byte) {
+	*(*Key)(buf[0:32]) = r.Key
+	binary.LittleEndian.PutUint64(buf[32:32+8], r.Offset&0xffffffffffff)
+	binary.LittleEndian.PutUint64(buf[38:38+8], r.Log&0xffffffffffffffff)
+	binary.LittleEndian.PutUint32(buf[46:46+4], r.Length&0xffffffff)
+	binary.LittleEndian.PutUint32(buf[50:50+4], r.Created&0xffffff)
+	binary.LittleEndian.PutUint32(buf[53:53+4], uint32(r.Expires)&0xffffff)
+	binary.LittleEndian.PutUint64(buf[56:56+8], r.Checksum&0xffffffffffffffff)
 }
 
-func (r *record) read(buf *[rSize]byte) {
-	r.key = *(*Key)(buf[0:32])
-	r.offset = binary.LittleEndian.Uint64(buf[32:32+8]) & 0xffffffffffff
-	r.log = binary.LittleEndian.Uint64(buf[38:38+8]) & 0xffffffffffffffff
-	r.length = binary.LittleEndian.Uint32(buf[46:46+4]) & 0xffffffff
-	r.created = binary.LittleEndian.Uint32(buf[50:50+4]) & 0xffffff
-	r.expires = expiration(binary.LittleEndian.Uint32(buf[53:53+4]) & 0xffffff)
-	r.checksum = binary.LittleEndian.Uint64(buf[56:56+8]) & 0xffffffffffffffff
+func (r *Record) read(buf *[rSize]byte) {
+	r.Key = *(*Key)(buf[0:32])
+	r.Offset = binary.LittleEndian.Uint64(buf[32:32+8]) & 0xffffffffffff
+	r.Log = binary.LittleEndian.Uint64(buf[38:38+8]) & 0xffffffffffffffff
+	r.Length = binary.LittleEndian.Uint32(buf[46:46+4]) & 0xffffffff
+	r.Created = binary.LittleEndian.Uint32(buf[50:50+4]) & 0xffffff
+	r.Expires = expiration(binary.LittleEndian.Uint32(buf[53:53+4]) & 0xffffff)
+	r.Checksum = binary.LittleEndian.Uint64(buf[56:56+8]) & 0xffffffffffffffff
 }

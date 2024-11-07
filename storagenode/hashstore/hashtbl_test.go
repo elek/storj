@@ -27,11 +27,11 @@ func TestHashtbl_BasicOperation(t *testing.T) {
 		r := h.AssertInsert()
 
 		// keep track of the key that was used.
-		keys = append(keys, r.key)
-		expLength += uint64(r.length)
+		keys = append(keys, r.Key)
+		expLength += uint64(r.Length)
 
 		// we should be able to find it.
-		h.AssertLookup(r.key)
+		h.AssertLookup(r.Key)
 
 		// reinsert should be fine.
 		ok, err := h.Insert(r)
@@ -39,7 +39,7 @@ func TestHashtbl_BasicOperation(t *testing.T) {
 		assert.True(t, ok)
 
 		// we should still be able to find it.
-		h.AssertLookup(r.key)
+		h.AssertLookup(r.Key)
 	}
 
 	assert.Equal(t, h.Load(), 0.5)
@@ -69,7 +69,7 @@ func TestHashtbl_BasicOperation(t *testing.T) {
 	_, err = h.Insert(newRecord(newKey()))
 	assert.Error(t, err)
 
-	h.Range(func(_ record, err error) bool {
+	h.Range(func(_ Record, err error) bool {
 		assert.Error(t, err)
 		return false
 	})
@@ -151,15 +151,15 @@ func TestHashtbl_SmallFileSizes(t *testing.T) {
 	assert.NoError(t, err)
 	defer func() { _ = fh.Close() }()
 
-	_, err = openHashtbl(fh)
+	_, err = OpenHashtbl(fh)
 	assert.Error(t, err)
 
 	assert.NoError(t, fh.Truncate(pSize))
-	_, err = openHashtbl(fh)
+	_, err = OpenHashtbl(fh)
 	assert.Error(t, err)
 
 	assert.NoError(t, fh.Truncate(pSize+(pSize-1)))
-	_, err = openHashtbl(fh)
+	_, err = OpenHashtbl(fh)
 	assert.Error(t, err)
 }
 
@@ -169,7 +169,7 @@ func TestHashtbl_OverwriteMergeRecords(t *testing.T) {
 
 	// create a new record with a non-zero expiration.
 	rec := newRecord(newKey())
-	rec.expires = newExpiration(1, true)
+	rec.Expires = newExpiration(1, true)
 
 	// insert the record.
 	ok, err := h.Insert(rec)
@@ -177,42 +177,42 @@ func TestHashtbl_OverwriteMergeRecords(t *testing.T) {
 	assert.True(t, ok)
 
 	// we should get back the record.
-	got, ok, err := h.Lookup(rec.key)
+	got, ok, err := h.Lookup(rec.Key)
 	assert.NoError(t, err)
 	assert.True(t, ok)
-	got.checksum = rec.checksum // ignore the checksum field for equality.
+	got.Checksum = rec.Checksum // ignore the checksum field for equality.
 	assert.Equal(t, got, rec)
 
 	// set the expiration to 0 and overwrite. this should be allowed.
-	rec.expires = 0
+	rec.Expires = 0
 	ok, err = h.Insert(rec)
 	assert.NoError(t, err)
 	assert.True(t, ok)
 
 	// we should get back the record with no expiration because that's a larger expiration.
-	got, ok, err = h.Lookup(rec.key)
+	got, ok, err = h.Lookup(rec.Key)
 	assert.NoError(t, err)
 	assert.True(t, ok)
-	got.checksum = rec.checksum // ignore the checksum field for equality.
+	got.Checksum = rec.Checksum // ignore the checksum field for equality.
 	assert.Equal(t, got, rec)
 
 	// we should not be able to overwrite the record with a different log file.
-	rec.log++
+	rec.Log++
 	_, err = h.Insert(rec)
 	assert.Error(t, err)
 
 	// we should be able to try to overwrite the record with a smaller expiration
-	rec.log--
-	rec.expires = newExpiration(2, true)
+	rec.Log--
+	rec.Expires = newExpiration(2, true)
 	ok, err = h.Insert(rec)
 	assert.NoError(t, err)
 	assert.True(t, ok)
 
 	// we should get back the record with the larger expiration.
-	got2, ok, err := h.Lookup(rec.key)
+	got2, ok, err := h.Lookup(rec.Key)
 	assert.NoError(t, err)
 	assert.True(t, ok)
-	got2.checksum = got.checksum // ignore the checksum field for equality.
+	got2.Checksum = got.Checksum // ignore the checksum field for equality.
 	assert.Equal(t, got2, got)
 }
 
@@ -226,7 +226,7 @@ func TestHashtbl_RangeExitEarly(t *testing.T) {
 
 	// only iterate through 10 records and then exit early.
 	n := 0
-	h.Range(func(r record, err error) bool {
+	h.Range(func(r Record, err error) bool {
 		n++
 		return n < 10
 	})
@@ -244,7 +244,7 @@ func BenchmarkHashtbl(b *testing.B) {
 		var keys []Key
 		for i := 0; i < 1<<lrec/2; i++ {
 			rec := h.AssertInsert()
-			keys = append(keys, rec.key)
+			keys = append(keys, rec.Key)
 		}
 
 		b.ReportAllocs()
@@ -287,8 +287,8 @@ func BenchmarkHashtbl(b *testing.B) {
 		for i := 0; i < inserts; i++ {
 			h.AssertInsert()
 		}
-		var recs []record
-		h.Range(func(rec record, err error) bool {
+		var recs []Record
+		h.Range(func(rec Record, err error) bool {
 			assert.NoError(b, err)
 			recs = append(recs, rec)
 			return true

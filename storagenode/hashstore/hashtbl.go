@@ -15,7 +15,7 @@ import (
 	"storj.io/drpc/drpcsignal"
 )
 
-type hashTbl struct {
+type HashTbl struct {
 	fh      *os.File
 	lrec    uint64 // log_2 of number of records
 	nrec    uint64 // 1 << lrec
@@ -34,7 +34,7 @@ type hashTbl struct {
 	p     page       // cached page data
 }
 
-func createHashtbl(fh *os.File, lrec uint64, created uint32) (*hashTbl, error) {
+func CreateHashtbl(fh *os.File, lrec uint64, created uint32) (*HashTbl, error) {
 	// clear the file and truncate it to the correct length and write the header page.
 	size := int64(pSize + 1<<lrec*rSize)
 	if err := fh.Truncate(0); err != nil {
@@ -47,10 +47,10 @@ func createHashtbl(fh *os.File, lrec uint64, created uint32) (*hashTbl, error) {
 
 	// this is a bit wasteful in the sense that we will do some stat calls, reread the header page,
 	// and compute estimates, but it reduces code paths and is not that expensive overall.
-	return openHashtbl(fh)
+	return OpenHashtbl(fh)
 }
 
-func openHashtbl(fh *os.File) (_ *hashTbl, err error) {
+func OpenHashtbl(fh *os.File) (_ *HashTbl, err error) {
 	// compute the number of records from the file size of the hash table.
 	size, err := fileSize(fh)
 	if err != nil {
@@ -73,7 +73,7 @@ func openHashtbl(fh *os.File) (_ *hashTbl, err error) {
 		return nil, errs.Wrap(err)
 	}
 
-	h := &hashTbl{
+	h := &HashTbl{
 		fh:      fh,
 		lrec:    lrec,
 		nrec:    1 << lrec,
@@ -92,7 +92,7 @@ func openHashtbl(fh *os.File) (_ *hashTbl, err error) {
 }
 
 // Close closes the hash table and returns when no more operations are running.
-func (h *hashTbl) Close() {
+func (h *HashTbl) Close() {
 	h.cloMu.Lock()
 	defer h.cloMu.Unlock()
 
@@ -140,17 +140,17 @@ func readHashtblHeader(fh *os.File) (created uint32, err error) {
 }
 
 // index computes the page and record index for the nth record.
-func (h *hashTbl) index(n uint64) (pi uint64, ri uint64) {
+func (h *HashTbl) index(n uint64) (pi uint64, ri uint64) {
 	return n / rPerP, n % rPerP
 }
 
 // invalidatePageCache invalidates which page is currently cached in memory.
-func (h *hashTbl) invalidatePageCache() {
+func (h *HashTbl) invalidatePageCache() {
 	h.pi = ^uint64(0)
 }
 
 // readPageLocked ensures that the pi'th page is cached in memory.
-func (h *hashTbl) readPageLocked(pi uint64) error {
+func (h *HashTbl) readPageLocked(pi uint64) error {
 	if pi == h.pi {
 		return nil
 	}
@@ -164,7 +164,7 @@ func (h *hashTbl) readPageLocked(pi uint64) error {
 }
 
 // readRecord reads the nth slot into the record pointed at by rec.
-func (h *hashTbl) readRecord(n uint64, rec *record) error {
+func (h *HashTbl) readRecord(n uint64, rec *Record) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -178,7 +178,7 @@ func (h *hashTbl) readRecord(n uint64, rec *record) error {
 }
 
 // writeRecord writes rec into the nth slot.
-func (h *hashTbl) writeRecord(n uint64, rec record) error {
+func (h *HashTbl) writeRecord(n uint64, rec Record) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -212,21 +212,21 @@ func (h *hashTbl) writeRecord(n uint64, rec record) error {
 
 // computeEstimates samples the hash table to compute the number of set keys and the total length of
 // the length fields in all of the set records.
-func (h *hashTbl) computeEstimates() (nset uint64, length uint64, err error) {
+func (h *HashTbl) computeEstimates() (nset uint64, length uint64, err error) {
 	// sample at most 256 pages worth of records (1MB)
 	srec := uint64(rPerP) * 256
 	if srec > h.nrec {
 		srec = h.nrec
 	}
 
-	var tmp record
+	var tmp Record
 	for ri := uint64(0); ri < srec; ri++ {
 		if err := h.readRecord(ri, &tmp); err != nil {
 			return 0, 0, err
 		}
 		if tmp.validChecksum() {
 			nset++
-			length += uint64(tmp.length)
+			length += uint64(tmp.Length)
 		}
 	}
 
@@ -239,7 +239,7 @@ func (h *hashTbl) computeEstimates() (nset uint64, length uint64, err error) {
 
 // Estimates returns the estimated values for the number of set keys and the total length of the
 // length fields in all of the set records.
-func (h *hashTbl) Estimates() (nset, alive uint64) {
+func (h *HashTbl) Estimates() (nset, alive uint64) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -247,7 +247,7 @@ func (h *hashTbl) Estimates() (nset, alive uint64) {
 }
 
 // Load returns an estimate of what fraction of the hash table is occupied.
-func (h *hashTbl) Load() float64 {
+func (h *HashTbl) Load() float64 {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -255,20 +255,20 @@ func (h *hashTbl) Load() float64 {
 }
 
 // Range iterates over the records in hash table order.
-func (h *hashTbl) Range(fn func(record, error) bool) {
+func (h *HashTbl) Range(fn func(Record, error) bool) {
 	h.opMu.RLock()
 	defer h.opMu.RUnlock()
 
 	if err := h.closed.Err(); err != nil {
-		fn(record{}, err)
+		fn(Record{}, err)
 		return
 	}
 
-	var tmp record
+	var tmp Record
 	var nset, length uint64
 	for n := uint64(0); n < h.nrec; n++ {
 		if err := h.readRecord(n, &tmp); err != nil {
-			fn(record{}, err)
+			fn(Record{}, err)
 			return
 		}
 		if !tmp.validChecksum() {
@@ -276,7 +276,7 @@ func (h *hashTbl) Range(fn func(record, error) bool) {
 		}
 
 		nset++
-		length += uint64(tmp.length)
+		length += uint64(tmp.Length)
 
 		if !fn(tmp, nil) {
 			return
@@ -292,7 +292,7 @@ func (h *hashTbl) Range(fn func(record, error) bool) {
 // Insert adds a record to the hash table. It returns (true, nil) if the record was inserted, it
 // returns (false, nil) if the hash table is full, and (false, err) if any errors happened trying
 // to insert the record.
-func (h *hashTbl) Insert(rec record) (_ bool, err error) {
+func (h *HashTbl) Insert(rec Record) (_ bool, err error) {
 	h.opMu.Lock()
 	defer h.opMu.Unlock()
 
@@ -300,7 +300,7 @@ func (h *hashTbl) Insert(rec record) (_ bool, err error) {
 		return false, err
 	}
 
-	var tmp record
+	var tmp Record
 
 	for n, i := rec.index()&h.mask, uint64(0); i < h.nrec; n, i = (n+1)&h.mask, i+1 {
 		// note that in lookup, we protect against lost pages by reading at least 2 pages worth of
@@ -324,7 +324,7 @@ func (h *hashTbl) Insert(rec record) (_ bool, err error) {
 		// if we have a valid record, we need to do some checks.
 		if valid {
 			// if it is some other key, the slot is occupied and we need to probe further.
-			if tmp.key != rec.key {
+			if tmp.Key != rec.Key {
 				continue
 			}
 
@@ -334,7 +334,7 @@ func (h *hashTbl) Insert(rec record) (_ bool, err error) {
 				return false, errs.New("collision detected: put:%v != exist:%v", rec, tmp)
 			}
 
-			rec.expires = maxExpiration(rec.expires, tmp.expires)
+			rec.Expires = maxExpiration(rec.Expires, tmp.Expires)
 		}
 
 		// thus it is either invalid or the key matches and the record is updated, so we can write.
@@ -343,14 +343,14 @@ func (h *hashTbl) Insert(rec record) (_ bool, err error) {
 		}
 
 		h.mu.Lock()
-		h.alive += uint64(rec.length)
+		h.alive += uint64(rec.Length)
 		if !valid {
 			// if it's invalid, we are adding a new key.
 			h.nset++
-		} else if tmp.key == rec.key {
+		} else if tmp.Key == rec.Key {
 			// if it valid and our key, we're doing an update so subtract the old length, ensuring
 			// we don't wrap around.
-			subtract := uint64(tmp.length)
+			subtract := uint64(tmp.Length)
 			if subtract > h.alive {
 				subtract = h.alive
 			}
@@ -367,19 +367,19 @@ func (h *hashTbl) Insert(rec record) (_ bool, err error) {
 // Lookup returns the record for the given key if it exists in the hash table. It returns (rec,
 // true, nil) if the record existed, (rec{}, false, nil) if it did not exist, and (rec{}, false,
 // err) if any errors happened trying to look up the record.
-func (h *hashTbl) Lookup(key Key) (_ record, _ bool, err error) {
+func (h *HashTbl) Lookup(key Key) (_ Record, _ bool, err error) {
 	h.opMu.RLock()
 	defer h.opMu.RUnlock()
 
 	if err := h.closed.Err(); err != nil {
-		return record{}, false, err
+		return Record{}, false, err
 	}
 
-	var tmp record
+	var tmp Record
 
 	for n, i := keyIndex(&key)&h.mask, uint64(0); i < h.nrec; n, i = (n+1)&h.mask, i+1 {
 		if err := h.readRecord(n, &tmp); err != nil {
-			return record{}, false, errs.Wrap(err)
+			return Record{}, false, errs.Wrap(err)
 		}
 
 		if !tmp.validChecksum() {
@@ -391,11 +391,11 @@ func (h *hashTbl) Lookup(key Key) (_ record, _ bool, err error) {
 				continue
 			}
 
-			return record{}, false, nil
-		} else if tmp.key == key {
+			return Record{}, false, nil
+		} else if tmp.Key == key {
 			return tmp, true, nil
 		}
 	}
 
-	return record{}, false, nil
+	return Record{}, false, nil
 }

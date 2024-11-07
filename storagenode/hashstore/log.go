@@ -107,25 +107,25 @@ func (h *logHeap) Pop() any {
 type Reader struct {
 	r   *io.SectionReader
 	lf  *logFile
-	rec record
+	rec Record
 }
 
-func newLogReader(lf *logFile, rec record) *Reader {
+func newLogReader(lf *logFile, rec Record) *Reader {
 	return &Reader{
-		r:   io.NewSectionReader(lf.fh, int64(rec.offset), int64(rec.length)),
+		r:   io.NewSectionReader(lf.fh, int64(rec.Offset), int64(rec.Length)),
 		lf:  lf,
 		rec: rec,
 	}
 }
 
 // Key returns the key of thereader.
-func (l *Reader) Key() Key { return l.rec.key }
+func (l *Reader) Key() Key { return l.rec.Key }
 
 // Size returns the size of the reader.
-func (l *Reader) Size() int64 { return int64(l.rec.length) }
+func (l *Reader) Size() int64 { return int64(l.rec.Length) }
 
 // Trash returns true if the reader was for a trashed piece.
-func (l *Reader) Trash() bool { return l.rec.expires.trash() }
+func (l *Reader) Trash() bool { return l.rec.Expires.trash() }
 
 // Seek implements io.Seeker.
 func (l *Reader) Seek(offset int64, whence int) (int64, error) { return l.r.Seek(offset, whence) }
@@ -154,10 +154,10 @@ type Writer struct {
 	mu       sync.Mutex // protects the following fields
 	canceled flag
 	closed   flag
-	rec      record
+	rec      Record
 }
 
-func newWriter(store *store, lf *logFile, rec record) *Writer {
+func newWriter(store *store, lf *logFile, rec Record) *Writer {
 	return &Writer{
 		store: store,
 		lf:    lf,
@@ -171,7 +171,7 @@ func (h *Writer) Size() int64 {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	return int64(h.rec.length)
+	return int64(h.rec.Length)
 }
 
 // Close commits the writes that have happened. Close or Cancel must be called at least once.
@@ -192,7 +192,7 @@ func (h *Writer) Close() error {
 	// record because otherwise we would have to allocate a variable width buffer causing an
 	// allocation on every Close instead of just on the calls that fix alignment.
 	var written int
-	if align := 4096 - ((uint64(h.rec.length) + h.lf.size + rSize) % 4096); align > 0 && align < 64 {
+	if align := 4096 - ((uint64(h.rec.Length) + h.lf.size + rSize) % 4096); align > 0 && align < 64 {
 		written, _ = h.lf.fh.Write(make([]byte, align))
 	}
 
@@ -210,7 +210,7 @@ func (h *Writer) Close() error {
 	}
 
 	// increase our in-memory estimate of the size of the log file for sorting.
-	h.lf.size += uint64(h.rec.length) + uint64(written) + rSize
+	h.lf.size += uint64(h.rec.Length) + uint64(written) + rSize
 
 	return h.store.addRecord(h.rec)
 }
@@ -229,8 +229,8 @@ func (h *Writer) Cancel() {
 	defer h.store.replaceLogFile(h.lf)
 
 	// attempt to seek backwards the amount we have written to reclaim space.
-	if h.rec.length != 0 {
-		_, _ = h.lf.fh.Seek(-int64(h.rec.length), io.SeekCurrent)
+	if h.rec.Length != 0 {
+		_, _ = h.lf.fh.Seek(-int64(h.rec.Length), io.SeekCurrent)
 	}
 }
 
@@ -241,12 +241,12 @@ func (h *Writer) Write(p []byte) (n int, err error) {
 
 	if h.canceled || h.closed {
 		return 0, errs.New("invalid handle")
-	} else if uint64(h.rec.length)+uint64(len(p)) > math.MaxUint32 {
+	} else if uint64(h.rec.Length)+uint64(len(p)) > math.MaxUint32 {
 		return 0, errs.New("piece too large")
 	}
 
 	n, err = h.lf.fh.Write(p)
-	h.rec.length += uint32(n)
+	h.rec.Length += uint32(n)
 
 	return n, err
 }

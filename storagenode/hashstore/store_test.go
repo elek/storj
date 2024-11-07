@@ -123,7 +123,7 @@ func TestStore_ReadFromCompactedFile(t *testing.T) {
 	after, ok, err := s.tbl.Lookup(key)
 	assert.NoError(t, err)
 	assert.True(t, ok)
-	assert.That(t, before.log < after.log)
+	assert.That(t, before.Log < after.Log)
 
 	// move to the future so that compaction deletes the record.
 	s.today += compaction_ExpiresDays + 1
@@ -249,7 +249,7 @@ func TestStore_CompactLogFile(t *testing.T) {
 	// add some entries to the store that are not expired. keep track of their records in the
 	// hashtbl so that we can ensure they are in a new log file after compaction.
 	var live []Key
-	var recs []record
+	var recs []Record
 	for i := 0; i < 10; i++ {
 		key := s.AssertCreate(time.Time{})
 		live = append(live, key)
@@ -279,8 +279,8 @@ func TestStore_CompactLogFile(t *testing.T) {
 		assert.True(t, ok)
 
 		assert.False(t, recordsEqualish(got, exp)) // ensure they are different.
-		got.log, exp.log = 0, 0
-		got.offset, exp.offset = 0, 0
+		got.Log, exp.Log = 0, 0
+		got.Offset, exp.Offset = 0, 0
 		assert.True(t, recordsEqualish(got, exp)) // but only in their log location.
 	}
 }
@@ -405,9 +405,9 @@ func TestStore_MergeRecordsWhenCompactingWithLostPage(t *testing.T) {
 
 	// ensure the only entries in the table are duplicate k1 entries and kl.
 	keys := []Key{k1, k1, kl}
-	s.tbl.Range(func(rec record, err error) bool {
+	s.tbl.Range(func(rec Record, err error) bool {
 		assert.NoError(t, err)
-		assert.Equal(t, rec.key, keys[0])
+		assert.Equal(t, rec.Key, keys[0])
 		keys = keys[1:]
 		return true
 	})
@@ -628,8 +628,8 @@ func TestStore_LogContainsDataToReconstruct(t *testing.T) {
 	w.Cancel()
 
 	// collect all of the records from the log files.
-	collectRecords := func(lf *logFile) (recs []record) {
-		readRecord := func(off int64) (rec record) {
+	collectRecords := func(lf *logFile) (recs []Record) {
+		readRecord := func(off int64) (rec Record) {
 			var buf [rSize]byte
 			_, err := lf.fh.ReadAt(buf[:], off)
 			assert.NoError(t, err)
@@ -648,21 +648,21 @@ func TestStore_LogContainsDataToReconstruct(t *testing.T) {
 				continue
 			}
 			recs = append(recs, rec)
-			off = int64(rec.offset) - rSize
+			off = int64(rec.Offset) - rSize
 		}
 
 		return recs
 	}
 
-	var lfRecs []record
+	var lfRecs []Record
 	s.lfs.Range(func(_ uint64, lf *logFile) bool {
 		lfRecs = append(lfRecs, collectRecords(lf)...)
 		return true
 	})
 
 	// collect all the records in the hash table.
-	var tblRecs []record
-	s.tbl.Range(func(rec record, err error) bool {
+	var tblRecs []Record
+	s.tbl.Range(func(rec Record, err error) bool {
 		assert.NoError(t, err)
 		tblRecs = append(tblRecs, rec)
 		return true
@@ -670,10 +670,10 @@ func TestStore_LogContainsDataToReconstruct(t *testing.T) {
 
 	// both sets of records should be equal.
 	sort.Slice(lfRecs, func(i, j int) bool {
-		return string(lfRecs[i].key[:]) < string(lfRecs[j].key[:])
+		return string(lfRecs[i].Key[:]) < string(lfRecs[j].Key[:])
 	})
 	sort.Slice(tblRecs, func(i, j int) bool {
-		return string(tblRecs[i].key[:]) < string(tblRecs[j].key[:])
+		return string(tblRecs[i].Key[:]) < string(tblRecs[j].Key[:])
 	})
 	assert.DeepEqual(t, lfRecs, tblRecs)
 }
