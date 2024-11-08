@@ -98,11 +98,11 @@ type Endpoint struct {
 	log    *zap.Logger
 	config Config
 
-	ident   *identity.FullIdentity
-	trust   *trust.Pool
-	monitor *monitor.Service
-	retain  QueueRetain
-	bfm     *retain.BloomFilterManager
+	ident       *identity.FullIdentity
+	trustSource trust.TrustedSatelliteSource
+	monitor     *monitor.Service
+	retain      QueueRetain
+	bfm         *retain.BloomFilterManager
 
 	pingStats PingStatsSource
 
@@ -128,17 +128,17 @@ type RestoreTrash interface {
 }
 
 // NewEndpoint creates a new piecestore endpoint.
-func NewEndpoint(log *zap.Logger, ident *identity.FullIdentity, trust *trust.Pool, monitor *monitor.Service, retain QueueRetain, pingStats PingStatsSource, pieceBackend PieceBackend, ordersStore *orders.FileStore, usage bandwidth.DB, usedSerials *usedserials.Table, config Config) (*Endpoint, error) {
+func NewEndpoint(log *zap.Logger, ident *identity.FullIdentity, trustSource trust.TrustedSatelliteSource, monitor *monitor.Service, retain QueueRetain, pingStats PingStatsSource, pieceBackend PieceBackend, ordersStore *orders.FileStore, usage bandwidth.DB, usedSerials *usedserials.Table, config Config) (*Endpoint, error) {
 
 	return &Endpoint{
 		log:    log,
 		config: config,
 
-		ident:     ident,
-		trust:     trust,
-		monitor:   monitor,
-		retain:    retain,
-		pingStats: pingStats,
+		ident:       ident,
+		trustSource: trustSource,
+		monitor:     monitor,
+		retain:      retain,
+		pingStats:   pingStats,
 
 		ordersStore: ordersStore,
 		usage:       usage,
@@ -923,7 +923,7 @@ func (endpoint *Endpoint) RestoreTrash(ctx context.Context, restoreTrashReq *pb.
 		return nil, rpcstatus.Wrap(rpcstatus.Unauthenticated, err)
 	}
 
-	err = endpoint.trust.VerifySatelliteID(ctx, peer.ID)
+	err = endpoint.trustSource.VerifySatelliteID(ctx, peer.ID)
 	if err != nil {
 		return nil, rpcstatus.Error(rpcstatus.PermissionDenied, "RestoreTrash called with untrusted ID")
 	}
@@ -950,7 +950,7 @@ func (endpoint *Endpoint) Retain(ctx context.Context, retainReq *pb.RetainReques
 		return nil, rpcstatus.Wrap(rpcstatus.Unauthenticated, err)
 	}
 
-	err = endpoint.trust.VerifySatelliteID(ctx, peer.ID)
+	err = endpoint.trustSource.VerifySatelliteID(ctx, peer.ID)
 	if err != nil {
 		return nil, rpcstatus.Errorf(rpcstatus.PermissionDenied, "retain called with untrusted ID")
 	}
@@ -1006,7 +1006,7 @@ func (endpoint *Endpoint) RetainBig(stream pb.DRPCPiecestore_RetainBigStream) (e
 		return rpcstatus.Wrap(rpcstatus.Unauthenticated, err)
 	}
 
-	err = endpoint.trust.VerifySatelliteID(ctx, peer.ID)
+	err = endpoint.trustSource.VerifySatelliteID(ctx, peer.ID)
 	if err != nil {
 		return rpcstatus.Errorf(rpcstatus.PermissionDenied, "retain called with untrusted ID")
 	}
