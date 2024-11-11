@@ -159,7 +159,7 @@ func (hsb *HashStoreBackend) getDB(satellite storj.NodeID) (*hashstore.DB, error
 }
 
 // Writer implements PieceBackend.
-func (hsb *HashStoreBackend) Writer(ctx context.Context, satellite storj.NodeID, pieceID storj.PieceID, hash pb.PieceHashAlgorithm, expires time.Time) (PieceWriter, error) {
+func (hsb *HashStoreBackend) Writer(ctx context.Context, satellite storj.NodeID, pieceID storj.PieceID, hashAlgo pb.PieceHashAlgorithm, expires time.Time) (PieceWriter, error) {
 	db, err := hsb.getDB(satellite)
 	if err != nil {
 		return nil, err
@@ -168,9 +168,15 @@ func (hsb *HashStoreBackend) Writer(ctx context.Context, satellite storj.NodeID,
 	if err != nil {
 		return nil, err
 	}
+	var hasher hash.Hash
+	if hashAlgo == -1 {
+		hasher = NoHash{}
+	} else {
+		hasher = pb.NewHashFromAlgorithm(hashAlgo)
+	}
 	return &hashStoreWriter{
 		writer: writer,
-		hasher: pb.NewHashFromAlgorithm(hash),
+		hasher: hasher,
 	}, nil
 }
 
@@ -391,4 +397,26 @@ func (o *oldPieceReader) Trash() bool { return o.trash }
 
 func (o *oldPieceReader) GetHashAndLimit(ctx context.Context) (pb.PieceHash, pb.OrderLimit, error) {
 	return o.store.GetHashAndLimit(ctx, o.satellite, o.pieceID, o.Reader)
+}
+
+type NoHash struct {
+}
+
+func (n2 NoHash) Write(p []byte) (n int, err error) {
+	return 0, nil
+}
+
+func (n2 NoHash) Sum(b []byte) []byte {
+	return []byte{}
+}
+
+func (n2 NoHash) Reset() {
+}
+
+func (n2 NoHash) Size() int {
+	return 0
+}
+
+func (n2 NoHash) BlockSize() int {
+	return 0
 }
