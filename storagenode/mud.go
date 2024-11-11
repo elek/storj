@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"storj.io/storj/storagenode/cleanup"
 	"time"
 
 	"github.com/spacemonkeygo/monkit/v3"
@@ -134,6 +135,7 @@ func Module(ball *mud.Ball) {
 		sdebug.Module(ball)
 	}
 
+		cleanup.Module(ball)
 	{ // version setup
 		mud.Provide[*checker.Service](ball, func(log *zap.Logger, config checker.Config, versionInfo version.Info) *checker.Service {
 			return checker.NewService(log, config, versionInfo, "Storagenode")
