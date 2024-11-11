@@ -8,27 +8,14 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zeebo/errs"
-	"go.uber.org/zap"
-
 	"storj.io/common/cfgstruct"
 	"storj.io/storj/private/mud"
 	"storj.io/storj/shared/modular"
 	"storj.io/storj/shared/modular/config"
-	"storj.io/storj/storagenode"
 )
 
 // newExecCmd creates a new exec command.
-func newExecCmd(f *Factory) *cobra.Command {
-	ball := &mud.Ball{}
-	mud.Provide[*zap.Logger](ball, func() (*zap.Logger, error) {
-		logger, err := zap.NewDevelopment()
-		if err != nil {
-			return nil, errs.Wrap(err)
-		}
-		return logger.With(zap.String("Process", "storagenode")), nil
-	})
-	modular.IdentityModule(ball)
-	storagenode.Module(ball)
+func newExecCmd(f *Factory, ball *mud.Ball) *cobra.Command {
 	selector := modular.CreateSelector(ball)
 	stop := &modular.StopTrigger{}
 	mud.Supply[*modular.StopTrigger](ball, stop)

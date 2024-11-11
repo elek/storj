@@ -35,9 +35,10 @@ func newRootCmd() (*cobra.Command, *Factory) {
 	cmd.PersistentFlags().BoolVar(&factory.UseColor, "color", false, "use color in user interface")
 
 	factory.Defaults = cfgstruct.DefaultsFlag(cmd)
-
+	ball := CreateModule()
 	cmd.AddCommand(
-		newExecCmd(factory),
+		newExecCmd(factory, ball),
+		newComponentCmd(factory, ball),
 	)
 
 	return cmd, factory
