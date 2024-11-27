@@ -70,4 +70,5 @@ func Module(ball *mud.Ball) {
 
 	mud.View[DB, nodeevents.DB](ball, DB.NodeEvents)
 
+	piecelist.Module(ball)
 }
