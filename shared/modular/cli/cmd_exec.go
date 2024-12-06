@@ -11,7 +11,7 @@ import (
 	"github.com/zeebo/errs"
 
 	"storj.io/common/cfgstruct"
-	"storj.io/storj/private/mud"
+	"storj.io/storj/shared/mud"
 	"storj.io/storj/shared/modular"
 	"storj.io/storj/shared/modular/config"
 )

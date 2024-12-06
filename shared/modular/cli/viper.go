@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/zeebo/structs"
 
-	"storj.io/storj/private/mud"
+	"storj.io/storj/shared/mud"
 	"storj.io/storj/shared/modular/config"
 )
 

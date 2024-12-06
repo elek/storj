@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"storj.io/common/testrand"
-	"storj.io/storj/private/mud"
-	"storj.io/storj/private/mud/mudtest"
+	"storj.io/storj/shared/mud"
+	"storj.io/storj/shared/mud/mudtest"
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/shared/dbutil/dbtest"
 )

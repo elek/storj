@@ -4,7 +4,7 @@
 package root
 
 import (
-	"storj.io/storj/private/mud"
+	"storj.io/storj/shared/mud"
 	"storj.io/storj/shared/modular"
 	"storj.io/storj/shared/modular/logger"
 	"storj.io/storj/storagenode"

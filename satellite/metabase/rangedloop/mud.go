@@ -4,7 +4,7 @@
 package rangedloop
 
 import (
-	"storj.io/storj/private/mud"
+	"storj.io/storj/shared/mud"
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/shared/modular/config"
 )

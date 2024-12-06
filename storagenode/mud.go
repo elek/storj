@@ -21,7 +21,7 @@ import (
 	"storj.io/common/rpc"
 	"storj.io/common/storj"
 	"storj.io/common/version"
-	"storj.io/storj/private/mud"
+	"storj.io/storj/shared/mud"
 	"storj.io/storj/private/revocation"
 	"storj.io/storj/private/server"
 	"storj.io/storj/private/version/checker"

@@ -4,7 +4,7 @@
 package root
 
 import (
-	"storj.io/storj/private/mud"
+	"storj.io/storj/shared/mud"
 	"storj.io/storj/satellite"
 	"storj.io/storj/satellite/satellitedb"
 	"storj.io/storj/shared/modular"

@@ -8,7 +8,7 @@ import (
 
 	"storj.io/common/identity"
 	"storj.io/common/rpc"
-	"storj.io/storj/private/mud"
+	"storj.io/storj/shared/mud"
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/orders"
 	"storj.io/storj/satellite/overlay"
