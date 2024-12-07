@@ -53,6 +53,9 @@ func LoadConfig(cmd *cobra.Command, ball *mud.Ball, selector mud.ComponentSelect
 			} else {
 				settings = allSettings
 				for _, sub := range strings.Split(cfg.Prefix, ".") {
+				    if settings[sub] == nil {
+				    	panic(sub)
+				    }
 					settings = settings[sub].(map[string]interface{})
 					if settings == nil {
 						break
