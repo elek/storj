@@ -110,7 +110,7 @@ func stageStr(stage *Stage, s string) string {
 	return strings.ToUpper(s)
 }
 
-func (c *Component) addRequirement(in reflect.Type) {
+func (c *Component) AddRequirement(in reflect.Type) {
 	for _, req := range c.requirements {
 		if req == in {
 			return
