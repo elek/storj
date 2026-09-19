@@ -14,7 +14,7 @@
             Showing the first {{ page.nodes.length.toLocaleString() }} nodes. You operate more than we can list here.
         </v-alert>
 
-        <NodesTableComponent v-if="!isForbidden" :nodes="page.nodes" :is-loading="isLoading" />
+        <NodesTableComponent v-if="!isForbidden" :nodes="page.nodes" :is-loading="isLoading" @confirmed="onConfirmed" />
     </v-container>
 </template>
 
@@ -37,6 +37,14 @@ const notify = useNotify();
 const page = ref<NodesPage>({ nodes: [], truncated: false });
 const isLoading = ref<boolean>(true);
 const isForbidden = ref<boolean>(false);
+
+/**
+ * The tag is now in the database, so reflect it without refetching the list.
+ */
+function onConfirmed(nodeID: string): void {
+    const node = page.value.nodes.find(n => n.id === nodeID);
+    if (node) node.confirmed = true;
+}
 
 onMounted(async () => {
     try {

@@ -69,6 +69,22 @@
         <template #item.vettedAt="{ item }">
             <span class="text-no-wrap">{{ item.vettedAt ? Time.formattedDate(item.vettedAt) : 'Not vetted' }}</span>
         </template>
+
+        <template #item.confirmed="{ item }">
+            <v-chip v-if="item.confirmed" color="success" size="small" variant="tonal">
+                Confirmed
+            </v-chip>
+            <v-btn
+                v-else
+                size="small"
+                variant="outlined"
+                :loading="confirming === item.id"
+                :disabled="confirming !== ''"
+                @click="() => confirm(item)"
+            >
+                Confirm
+            </v-btn>
+        </template>
     </v-data-table>
 </template>
 
@@ -79,10 +95,12 @@ import {
     VTextField,
     VChip,
     VTooltip,
+    VBtn,
 } from 'vuetify/components';
 import { Search } from '@lucide/vue';
 
 import { type Node, nodeStatus, nodeStatusColor } from '@/extensions/nodes/types';
+import { NodesHttpAPI } from '@/extensions/nodes/api';
 import { Time } from '@/utils/time';
 import { Size } from '@/utils/bytesSize';
 import { tableSizeOptions } from '@/types/common';
@@ -93,9 +111,19 @@ defineProps<{
     isLoading: boolean;
 }>();
 
+const emit = defineEmits<{
+    confirmed: [nodeID: string];
+}>();
+
+const api = new NodesHttpAPI();
 const notify = useNotify();
 
 const search = ref<string>('');
+
+/**
+ * The id of the node whose confirmation is in flight, empty when idle.
+ */
+const confirming = ref<string>('');
 
 const headers = [
     { title: 'Node ID', key: 'id' },
@@ -108,8 +136,21 @@ const headers = [
     { title: 'Wallet', key: 'wallet' },
     { title: 'Vetted', key: 'vettedAt' },
     { title: 'Version', key: 'version' },
-    { title: 'Country', key: 'countryCode' },
+    { title: 'Ownership', key: 'confirmed', sortable: false },
 ];
+
+async function confirm(node: Node): Promise<void> {
+    confirming.value = node.id;
+    try {
+        await api.confirm(node.id);
+        emit('confirmed', node.id);
+        notify.success('Node ownership confirmed');
+    } catch (error) {
+        notify.notifyError(error as Error);
+    } finally {
+        confirming.value = '';
+    }
+}
 
 function shortNodeID(id: string): string {
     return id.length > 16 ? `${id.slice(0, 8)}…${id.slice(-6)}` : id;

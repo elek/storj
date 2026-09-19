@@ -1099,5 +1099,40 @@ func TestGetNodesByEmailInsensitive(t *testing.T) {
 			require.NoError(t, err)
 			require.Empty(t, nodes)
 		})
+
+		// The console reads the owner tag straight off the dossier, so that
+		// listing a page of nodes does not turn into a query per node.
+		t.Run("node tags are returned with the dossier", func(t *testing.T) {
+			signer := testrand.NodeID()
+			signedAt := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+			value := testrand.UUID().Bytes()
+
+			require.NoError(t, cache.UpdateNodeTags(ctx, nodeselection.NodeTags{{
+				NodeID:   node1ID,
+				Name:     "owner",
+				Value:    value,
+				SignedAt: signedAt,
+				Signer:   signer,
+			}}))
+
+			nodes, err := cache.GetNodesByEmailInsensitive(ctx, nodeEmail, 10)
+			require.NoError(t, err)
+			require.Len(t, nodes, 2)
+
+			for _, node := range nodes {
+				if node.Id != node1ID {
+					require.Empty(t, node.Tags, "untagged node should come back with no tags")
+					continue
+				}
+
+				require.Len(t, node.Tags, 1)
+				tag := node.Tags[0]
+				require.Equal(t, node1ID, tag.NodeID)
+				require.Equal(t, "owner", tag.Name)
+				require.Equal(t, value, tag.Value)
+				require.Equal(t, signer, tag.Signer)
+				require.WithinDuration(t, signedAt, tag.SignedAt, time.Microsecond)
+			}
+		})
 	})
 }

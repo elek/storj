@@ -1929,7 +1929,8 @@ func (cache *overlaycache) GetNodesByEmail(ctx context.Context, options overlay.
 }
 
 // GetNodesByEmailInsensitive returns up to limit nodes whose operator email matches email,
-// ignoring case.
+// ignoring case. The returned dossiers carry their node tags, so that a caller looking for a
+// single tag does not have to follow up with a query per node.
 //
 // N.B. nodes.email has no index, so this is a sequential scan, same as GetNodesByEmail.
 func (cache *overlaycache) GetNodesByEmailInsensitive(ctx context.Context, email string, limit int) (_ []*overlay.NodeDossier, err error) {
@@ -1949,7 +1950,17 @@ func (cache *overlaycache) GetNodesByEmailInsensitive(ctx context.Context, email
 			unknown_audit_suspended, offline_suspended, under_review, exit_initiated_at,
 			exit_loop_completed_at, exit_finished_at, exit_success, contained,
 			last_offline_email, last_software_update_email, noise_proto, noise_public_key,
-			debounce_limit, features
+			debounce_limit, features,
+			(
+				SELECT array_to_json(array_agg(
+					json_build_object(
+						'Name', name,
+						'Value', encode(value, 'base64'),
+						'SignedAt', signed_at,
+						'Signer', encode(signer, 'base64')
+					)))
+				FROM node_tags WHERE node_id = nodes.id
+			) AS node_tags_json
 		FROM nodes
 		WHERE LOWER(email) = LOWER(?)
 		ORDER BY id
@@ -1957,6 +1968,7 @@ func (cache *overlaycache) GetNodesByEmailInsensitive(ctx context.Context, email
 	`), email, limit))(func(rows tagsql.Rows) error {
 		for rows.Next() {
 			var dbxNode dbx.Node
+			var tagsJSON []byte
 			err := rows.Scan(&dbxNode.Id, &dbxNode.Address, &dbxNode.LastNet, &dbxNode.LastIpPort,
 				&dbxNode.CountryCode, &dbxNode.Protocol, &dbxNode.Email, &dbxNode.Wallet,
 				&dbxNode.WalletFeatures, &dbxNode.FreeDisk, &dbxNode.PieceCount, &dbxNode.Major,
@@ -1967,7 +1979,8 @@ func (cache *overlaycache) GetNodesByEmailInsensitive(ctx context.Context, email
 				&dbxNode.OfflineSuspended, &dbxNode.UnderReview, &dbxNode.ExitInitiatedAt,
 				&dbxNode.ExitLoopCompletedAt, &dbxNode.ExitFinishedAt, &dbxNode.ExitSuccess,
 				&dbxNode.Contained, &dbxNode.LastOfflineEmail, &dbxNode.LastSoftwareUpdateEmail,
-				&dbxNode.NoiseProto, &dbxNode.NoisePublicKey, &dbxNode.DebounceLimit, &dbxNode.Features)
+				&dbxNode.NoiseProto, &dbxNode.NoisePublicKey, &dbxNode.DebounceLimit, &dbxNode.Features,
+				&tagsJSON)
 			if err != nil {
 				return err
 			}
@@ -1976,6 +1989,12 @@ func (cache *overlaycache) GetNodesByEmailInsensitive(ctx context.Context, email
 			if err != nil {
 				return err
 			}
+
+			dossier.Tags, err = parseNodeTagsJSON(dossier.Id, tagsJSON)
+			if err != nil {
+				return err
+			}
+
 			nodes = append(nodes, dossier)
 		}
 		return nil
@@ -1985,6 +2004,42 @@ func (cache *overlaycache) GetNodesByEmailInsensitive(ctx context.Context, email
 	}
 
 	return nodes, nil
+}
+
+// parseNodeTagsJSON decodes the aggregated node_tags rows produced by the subquery above.
+//
+// N.B. scanSelectedNodeWithTags decodes the same shape inline. Duplicating it here keeps this
+// feature branch's diff against upstream additive, which is worth more than the shared helper.
+func parseNodeTagsJSON(nodeID storj.NodeID, tagsJSON []byte) (nodeselection.NodeTags, error) {
+	if len(tagsJSON) == 0 {
+		return nil, nil
+	}
+
+	var raw []struct {
+		SignedAt time.Time
+		Signer   []byte
+		Name     string
+		Value    []byte
+	}
+	if err := json.Unmarshal(tagsJSON, &raw); err != nil {
+		return nil, Error.Wrap(err)
+	}
+
+	tags := make(nodeselection.NodeTags, len(raw))
+	for i, tag := range raw {
+		signer, err := storj.NodeIDFromBytes(tag.Signer)
+		if err != nil {
+			return nil, Error.Wrap(err)
+		}
+		tags[i] = nodeselection.NodeTag{
+			NodeID:   nodeID,
+			SignedAt: tag.SignedAt,
+			Signer:   signer,
+			Name:     tag.Name,
+			Value:    tag.Value,
+		}
+	}
+	return tags, nil
 }
 
 func (cache *overlaycache) TestUpdateCheckInDirectUpdate(ctx context.Context, node overlay.NodeCheckInInfo, timestamp time.Time, semVer version.SemVer, walletFeatures string) (updated bool, err error) {

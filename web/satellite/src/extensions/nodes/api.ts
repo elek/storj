@@ -31,11 +31,30 @@ export class NodesHttpAPI {
             nodes: (result.nodes ?? []).map(parseNode),
         };
     }
+
+    /**
+     * Records that the logged in user owns the node, as a satellite signed tag.
+     *
+     * @throws APIError
+     */
+    public async confirm(nodeID: string): Promise<void> {
+        const response = await this.client.post(`${this.ROOT_PATH}/${nodeID}/confirm`, null);
+
+        if (!response.ok) {
+            const result = await response.json().catch(() => ({}));
+            throw new APIError({
+                status: response.status,
+                message: result.error || 'Cannot confirm node ownership',
+                requestID: response.headers.get('x-request-id'),
+            });
+        }
+    }
 }
 
 function parseNode(node: Node): Node {
     return {
         ...node,
+        confirmed: !!node.confirmed,
         walletFeatures: node.walletFeatures ?? [],
         lastContactSuccess: new Date(node.lastContactSuccess),
         lastContactFailure: new Date(node.lastContactFailure),

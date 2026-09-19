@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
@@ -18,11 +19,14 @@ import (
 	"storj.io/common/storj"
 	"storj.io/common/testcontext"
 	"storj.io/common/testrand"
+	"storj.io/common/uuid"
 	"storj.io/storj/satellite/console"
+	"storj.io/storj/satellite/console/consoleext"
+	"storj.io/storj/satellite/nodeselection"
 	"storj.io/storj/satellite/overlay"
 )
 
-// stubOverlayDB implements only the one method the extension uses. The embedded
+// stubOverlayDB implements only the few methods the extension uses. The embedded
 // nil interface panics on anything else, which is what we want: the extension
 // should not be reaching for the rest of overlay.DB.
 type stubOverlayDB struct {
@@ -33,6 +37,7 @@ type stubOverlayDB struct {
 
 	gotEmail string
 	gotLimit int
+	gotTags  nodeselection.NodeTags
 }
 
 func (s *stubOverlayDB) GetNodesByEmailInsensitive(ctx context.Context, email string, limit int) ([]*overlay.NodeDossier, error) {
@@ -45,6 +50,26 @@ func (s *stubOverlayDB) GetNodesByEmailInsensitive(ctx context.Context, email st
 		return s.nodes[:limit], nil
 	}
 	return s.nodes, nil
+}
+
+func (s *stubOverlayDB) Get(ctx context.Context, nodeID storj.NodeID) (*overlay.NodeDossier, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	for _, n := range s.nodes {
+		if n.Id == nodeID {
+			return n, nil
+		}
+	}
+	return nil, overlay.ErrNodeNotFound.New("%v", nodeID)
+}
+
+func (s *stubOverlayDB) UpdateNodeTags(ctx context.Context, tags nodeselection.NodeTags) error {
+	if s.err != nil {
+		return s.err
+	}
+	s.gotTags = append(s.gotTags, tags...)
+	return nil
 }
 
 func dossier(id storj.NodeID, lastContactSuccess time.Time) *overlay.NodeDossier {
@@ -69,6 +94,14 @@ func dossier(id storj.NodeID, lastContactSuccess time.Time) *overlay.NodeDossier
 	}
 }
 
+// satelliteID stands in for the identity this satellite signs owner tags with.
+var satelliteID = testrand.NodeID()
+
+func newExt(t *testing.T, db overlay.DB) *Extension {
+	t.Helper()
+	return New(zaptest.NewLogger(t), db, satelliteID)
+}
+
 func serve(t *testing.T, ext *Extension, user *console.User) *httptest.ResponseRecorder {
 	t.Helper()
 
@@ -82,6 +115,24 @@ func serve(t *testing.T, ext *Extension, user *console.User) *httptest.ResponseR
 	return rec
 }
 
+// serveConfirm drives ConfirmNode through a real router, so that the {id} path
+// variable is resolved the same way it is in production.
+func serveConfirm(t *testing.T, ext *Extension, user *console.User, nodeID string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	router := mux.NewRouter()
+	ext.Register(router, consoleext.Deps{WithAuth: func(next http.Handler) http.Handler { return next }})
+
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v0/nodes/"+nodeID+"/confirm", nil)
+	if user != nil {
+		req = req.WithContext(console.WithUser(req.Context(), user))
+	}
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	return rec
+}
+
 func TestGetNodes(t *testing.T) {
 	ctx := testcontext.New(t)
 	defer ctx.Cleanup()
@@ -89,7 +140,7 @@ func TestGetNodes(t *testing.T) {
 	now := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
 
 	t.Run("unauthenticated request is rejected", func(t *testing.T) {
-		ext := New(zaptest.NewLogger(t), &stubOverlayDB{})
+		ext := newExt(t, &stubOverlayDB{})
 		rec := serve(t, ext, nil)
 		require.Equal(t, http.StatusUnauthorized, rec.Code)
 	})
@@ -104,7 +155,7 @@ func TestGetNodes(t *testing.T) {
 	} {
 		t.Run("status "+status.String()+" is rejected", func(t *testing.T) {
 			db := &stubOverlayDB{nodes: []*overlay.NodeDossier{dossier(testrand.NodeID(), now)}}
-			ext := New(zaptest.NewLogger(t), db)
+			ext := newExt(t, db)
 
 			rec := serve(t, ext, &console.User{Email: "operator@storj.test", Status: status})
 
@@ -119,7 +170,7 @@ func TestGetNodes(t *testing.T) {
 			dossier(onlineID, now.Add(-time.Hour)),
 			dossier(offlineID, now.Add(-24*time.Hour)),
 		}}
-		ext := New(zaptest.NewLogger(t), db)
+		ext := newExt(t, db)
 		ext.nowFn = func() time.Time { return now }
 
 		rec := serve(t, ext, &console.User{Email: "operator@storj.test", Status: console.Active})
@@ -148,7 +199,7 @@ func TestGetNodes(t *testing.T) {
 		db := &stubOverlayDB{nodes: []*overlay.NodeDossier{
 			dossier(testrand.NodeID(), now.Add(-onlineWindow)),
 		}}
-		ext := New(zaptest.NewLogger(t), db)
+		ext := newExt(t, db)
 		ext.nowFn = func() time.Time { return now }
 
 		rec := serve(t, ext, &console.User{Email: "operator@storj.test", Status: console.Active})
@@ -167,7 +218,7 @@ func TestGetNodes(t *testing.T) {
 		d.Disqualified = &dq
 		d.DisqualificationReason = &reason
 
-		ext := New(zaptest.NewLogger(t), &stubOverlayDB{nodes: []*overlay.NodeDossier{d}})
+		ext := newExt(t, &stubOverlayDB{nodes: []*overlay.NodeDossier{d}})
 		ext.nowFn = func() time.Time { return now }
 
 		rec := serve(t, ext, &console.User{Email: "operator@storj.test", Status: console.Active})
@@ -188,7 +239,7 @@ func TestGetNodes(t *testing.T) {
 		}
 
 		db := &stubOverlayDB{nodes: all}
-		ext := New(zaptest.NewLogger(t), db)
+		ext := newExt(t, db)
 		ext.nowFn = func() time.Time { return now }
 
 		rec := serve(t, ext, &console.User{Email: "operator@storj.test", Status: console.Active})
@@ -208,7 +259,7 @@ func TestGetNodes(t *testing.T) {
 			all[i] = dossier(testrand.NodeID(), now)
 		}
 
-		ext := New(zaptest.NewLogger(t), &stubOverlayDB{nodes: all})
+		ext := newExt(t, &stubOverlayDB{nodes: all})
 		ext.nowFn = func() time.Time { return now }
 
 		rec := serve(t, ext, &console.User{Email: "operator@storj.test", Status: console.Active})
@@ -221,9 +272,136 @@ func TestGetNodes(t *testing.T) {
 	})
 
 	t.Run("an operator with no nodes gets an empty list, not null", func(t *testing.T) {
-		ext := New(zaptest.NewLogger(t), &stubOverlayDB{})
+		ext := newExt(t, &stubOverlayDB{})
 		rec := serve(t, ext, &console.User{Email: "nobody@storj.test", Status: console.Active})
 		require.Equal(t, http.StatusOK, rec.Code)
 		require.Contains(t, rec.Body.String(), `"nodes":[]`)
 	})
+
+	t.Run("ownership is reported from the owner tag", func(t *testing.T) {
+		user := activeUser(t)
+		otherUserID := testrand.UUID()
+
+		mine := dossier(testrand.NodeID(), now)
+		mine.Tags = ownerTags(mine.Id, satelliteID, user.ID)
+
+		// the same tag, but naming somebody else: the node changed hands, so
+		// this user has not confirmed it.
+		theirs := dossier(testrand.NodeID(), now)
+		theirs.Tags = ownerTags(theirs.Id, satelliteID, otherUserID)
+
+		// a tag naming this user, but signed by a node rather than by us.
+		forged := dossier(testrand.NodeID(), now)
+		forged.Tags = ownerTags(forged.Id, testrand.NodeID(), user.ID)
+
+		untagged := dossier(testrand.NodeID(), now)
+
+		ext := newExt(t, &stubOverlayDB{nodes: []*overlay.NodeDossier{mine, theirs, forged, untagged}})
+		ext.nowFn = func() time.Time { return now }
+
+		rec := serve(t, ext, user)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var page Page
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&page))
+		require.Len(t, page.Nodes, 4)
+
+		require.True(t, page.Nodes[0].Confirmed, "tagged by this satellite for this user")
+		require.False(t, page.Nodes[1].Confirmed, "tagged for a different user")
+		require.False(t, page.Nodes[2].Confirmed, "not signed by this satellite")
+		require.False(t, page.Nodes[3].Confirmed, "not tagged at all")
+	})
+}
+
+func TestConfirmNode(t *testing.T) {
+	ctx := testcontext.New(t)
+	defer ctx.Cleanup()
+
+	now := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
+
+	t.Run("unauthenticated request is rejected", func(t *testing.T) {
+		db := &stubOverlayDB{nodes: []*overlay.NodeDossier{dossier(testrand.NodeID(), now)}}
+		rec := serveConfirm(t, newExt(t, db), nil, db.nodes[0].Id.String())
+
+		require.Equal(t, http.StatusUnauthorized, rec.Code)
+		require.Empty(t, db.gotTags)
+	})
+
+	t.Run("unverified account is rejected", func(t *testing.T) {
+		db := &stubOverlayDB{nodes: []*overlay.NodeDossier{dossier(testrand.NodeID(), now)}}
+		user := activeUser(t)
+		user.Status = console.Inactive
+
+		rec := serveConfirm(t, newExt(t, db), user, db.nodes[0].Id.String())
+
+		require.Equal(t, http.StatusForbidden, rec.Code)
+		require.Empty(t, db.gotTags)
+	})
+
+	t.Run("a malformed node ID is rejected", func(t *testing.T) {
+		db := &stubOverlayDB{}
+		rec := serveConfirm(t, newExt(t, db), activeUser(t), "not-a-node-id")
+
+		require.Equal(t, http.StatusBadRequest, rec.Code)
+		require.Empty(t, db.gotTags)
+	})
+
+	t.Run("an unknown node is not found", func(t *testing.T) {
+		db := &stubOverlayDB{}
+		rec := serveConfirm(t, newExt(t, db), activeUser(t), testrand.NodeID().String())
+
+		require.Equal(t, http.StatusNotFound, rec.Code)
+		require.Empty(t, db.gotTags)
+	})
+
+	// The listing is the only thing that ties a user to a node, so confirming
+	// has to re-run the same check rather than trust the caller.
+	t.Run("a node registered to somebody else is rejected", func(t *testing.T) {
+		d := dossier(testrand.NodeID(), now)
+		d.Operator.Email = "somebody@else.test"
+		db := &stubOverlayDB{nodes: []*overlay.NodeDossier{d}}
+
+		rec := serveConfirm(t, newExt(t, db), activeUser(t), d.Id.String())
+
+		require.Equal(t, http.StatusForbidden, rec.Code)
+		require.Empty(t, db.gotTags)
+	})
+
+	t.Run("owner tag is written with the satellite as signer", func(t *testing.T) {
+		d := dossier(testrand.NodeID(), now)
+		db := &stubOverlayDB{nodes: []*overlay.NodeDossier{d}}
+		ext := newExt(t, db)
+		ext.nowFn = func() time.Time { return now }
+
+		// the node reports "Operator@Storj.Test"; the account is lowercase.
+		user := activeUser(t)
+		rec := serveConfirm(t, ext, user, d.Id.String())
+
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.Contains(t, rec.Body.String(), `"confirmed":true`)
+
+		require.Len(t, db.gotTags, 1)
+		require.Equal(t, nodeselection.NodeTag{
+			NodeID:   d.Id,
+			Name:     OwnerTagName,
+			Value:    user.ID.Bytes(),
+			SignedAt: now,
+			Signer:   satelliteID,
+		}, db.gotTags[0])
+	})
+}
+
+func activeUser(t *testing.T) *console.User {
+	t.Helper()
+	return &console.User{ID: testrand.UUID(), Email: "operator@storj.test", Status: console.Active}
+}
+
+func ownerTags(nodeID, signer storj.NodeID, owner uuid.UUID) nodeselection.NodeTags {
+	return nodeselection.NodeTags{{
+		NodeID:   nodeID,
+		Name:     OwnerTagName,
+		Value:    owner.Bytes(),
+		SignedAt: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC),
+		Signer:   signer,
+	}}
 }

@@ -22,6 +22,11 @@ export interface Node {
     countryCode: string;
     version: string;
     createdAt: Date;
+    /**
+     * confirmed is true when the satellite has recorded an owner tag naming the
+     * logged in user for this node.
+     */
+    confirmed: boolean;
 }
 
 /**
