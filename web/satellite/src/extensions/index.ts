@@ -12,6 +12,7 @@
 import { type RouteRecordRaw } from 'vue-router';
 
 import { type ExtensionNavItem } from '@/extensions/types';
+import { nodesNavItems, nodesRoutes } from '@/extensions/nodes';
 
 export * from '@/extensions/types';
 
@@ -19,9 +20,13 @@ export * from '@/extensions/types';
  * Routes contributed by extensions. They are rendered inside the account
  * layout, so they are reachable from anywhere in the app.
  */
-export const extensionRoutes: RouteRecordRaw[] = [];
+export const extensionRoutes: RouteRecordRaw[] = [
+    ...nodesRoutes,
+];
 
 /**
  * Navigation entries contributed by extensions, in display order.
  */
-export const extensionNavItems: ExtensionNavItem[] = [];
+export const extensionNavItems: ExtensionNavItem[] = [
+    ...nodesNavItems,
+].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));

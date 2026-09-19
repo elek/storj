@@ -164,6 +164,12 @@ type DB interface {
 
 	// GetNodesByEmail returns all nodes with the specified operator email address.
 	GetNodesByEmail(ctx context.Context, options GetNodesByEmailOptions) ([]*NodeDossier, *NodesByEmailCursor, error)
+
+	// GetNodesByEmailInsensitive returns up to limit nodes whose operator email matches
+	// email, ignoring case. Operator emails are self-reported at check-in and are not
+	// normalized, so an exact match would miss nodes configured with different casing
+	// than the one used to register the console account.
+	GetNodesByEmailInsensitive(ctx context.Context, email string, limit int) ([]*NodeDossier, error)
 }
 
 // NodesByEmailCursor is the cursor type for GetNodesByEmail pagination.

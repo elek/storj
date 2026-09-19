@@ -45,6 +45,7 @@ import (
 	"storj.io/storj/satellite/console/consoleauth/csrf"
 	"storj.io/storj/satellite/console/consoleauth/sso"
 	"storj.io/storj/satellite/console/consoleext"
+	consoleextnodes "storj.io/storj/satellite/console/consoleext/nodes"
 	"storj.io/storj/satellite/console/consoleservice"
 	"storj.io/storj/satellite/console/consoleweb"
 	"storj.io/storj/satellite/console/dbcleanup"
@@ -142,6 +143,7 @@ func Module(ball *mud.Ball) {
 	mud.Provide[*consoleweb.Server](ball, CreateServer)
 	consoleweb.Module(ball)
 	consoleext.Module(ball)
+	consoleextnodes.Module(ball)
 	{
 		mud.Provide[extensions.RevocationDB](ball, revocation.OpenDBFromCfg)
 		mud.Provide[rpc.Dialer](ball, rpc.NewDefaultPooledDialer)

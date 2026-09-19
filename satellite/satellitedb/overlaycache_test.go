@@ -1002,3 +1002,102 @@ func TestGetNodesByEmail(t *testing.T) {
 		require.Len(t, allIDs, 4)
 	})
 }
+
+func TestGetNodesByEmailInsensitive(t *testing.T) {
+	satellitedbtest.Run(t, func(ctx *testcontext.Context, t *testing.T, db satellite.DB) {
+		cache := db.OverlayCache()
+
+		selectionCfg := overlay.NodeSelectionConfig{
+			OnlineWindow: 4 * time.Hour,
+		}
+
+		// the node reports this casing at check-in; the console account was
+		// registered with a different one.
+		nodeEmail := "Operator@Storj.Test"
+		otherEmail := "other@storj.test"
+
+		node1ID := testrand.NodeID()
+		node2ID := testrand.NodeID()
+		otherEmailID := testrand.NodeID()
+
+		checkInInfo := overlay.NodeCheckInInfo{
+			IsUp: true,
+			Address: &pb.NodeAddress{
+				Address: "1.2.3.4",
+			},
+			Version: &pb.NodeVersion{
+				Version: "v0.0.0",
+			},
+			Operator: &pb.NodeOperator{
+				Email:  nodeEmail,
+				Wallet: "0x1234567890123456789012345678901234567890",
+			},
+		}
+
+		now := time.Now()
+
+		checkInInfo.NodeID = node1ID
+		require.NoError(t, cache.UpdateCheckIn(ctx, checkInInfo, now, selectionCfg))
+
+		checkInInfo.NodeID = node2ID
+		require.NoError(t, cache.UpdateCheckIn(ctx, checkInInfo, now, selectionCfg))
+
+		checkInInfo.NodeID = otherEmailID
+		checkInInfo.Operator.Email = otherEmail
+		require.NoError(t, cache.UpdateCheckIn(ctx, checkInInfo, now, selectionCfg))
+
+		for _, tt := range []struct {
+			name  string
+			email string
+		}{
+			{"exact casing", "Operator@Storj.Test"},
+			{"all lowercase", "operator@storj.test"},
+			{"all uppercase", "OPERATOR@STORJ.TEST"},
+			{"mixed casing", "oPeRaToR@sToRj.TeSt"},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				nodes, err := cache.GetNodesByEmailInsensitive(ctx, tt.email, 10)
+				require.NoError(t, err)
+				require.Len(t, nodes, 2)
+
+				foundIDs := make(map[storj.NodeID]bool)
+				for _, node := range nodes {
+					foundIDs[node.Id] = true
+					// the stored casing is returned untouched
+					require.Equal(t, nodeEmail, node.Operator.Email)
+					// the dossier is fully populated, not just the matched columns
+					require.Equal(t, "1.2.3.4", node.Address.Address)
+					require.Equal(t, "0x1234567890123456789012345678901234567890", node.Operator.Wallet)
+					require.False(t, node.Reputation.LastContactSuccess.IsZero())
+				}
+				require.True(t, foundIDs[node1ID])
+				require.True(t, foundIDs[node2ID])
+				require.False(t, foundIDs[otherEmailID], "node with a different email should not be found")
+			})
+		}
+
+		t.Run("limit is applied", func(t *testing.T) {
+			nodes, err := cache.GetNodesByEmailInsensitive(ctx, nodeEmail, 1)
+			require.NoError(t, err)
+			require.Len(t, nodes, 1)
+		})
+
+		t.Run("no match", func(t *testing.T) {
+			nodes, err := cache.GetNodesByEmailInsensitive(ctx, "nobody@storj.test", 10)
+			require.NoError(t, err)
+			require.Empty(t, nodes)
+		})
+
+		t.Run("empty email matches nothing", func(t *testing.T) {
+			nodes, err := cache.GetNodesByEmailInsensitive(ctx, "", 10)
+			require.NoError(t, err)
+			require.Empty(t, nodes)
+		})
+
+		t.Run("non-positive limit matches nothing", func(t *testing.T) {
+			nodes, err := cache.GetNodesByEmailInsensitive(ctx, nodeEmail, 0)
+			require.NoError(t, err)
+			require.Empty(t, nodes)
+		})
+	})
+}

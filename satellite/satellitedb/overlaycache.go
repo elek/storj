@@ -1928,6 +1928,65 @@ func (cache *overlaycache) GetNodesByEmail(ctx context.Context, options overlay.
 	return nodes, next, nil
 }
 
+// GetNodesByEmailInsensitive returns up to limit nodes whose operator email matches email,
+// ignoring case.
+//
+// N.B. nodes.email has no index, so this is a sequential scan, same as GetNodesByEmail.
+func (cache *overlaycache) GetNodesByEmailInsensitive(ctx context.Context, email string, limit int) (_ []*overlay.NodeDossier, err error) {
+	defer mon.Task()(&ctx)(&err)
+
+	nodes := make([]*overlay.NodeDossier, 0)
+
+	if email == "" || limit <= 0 {
+		return nodes, nil
+	}
+
+	err = withRows(cache.db.QueryContext(ctx, cache.db.Rebind(`
+		SELECT id, address, last_net, last_ip_port, country_code, protocol, email, wallet,
+			wallet_features, free_disk, piece_count, major, minor, patch, commit_hash,
+			release_timestamp, release, latency_90, vetted_at, created_at, updated_at,
+			last_contact_success, last_contact_failure, disqualified, disqualification_reason,
+			unknown_audit_suspended, offline_suspended, under_review, exit_initiated_at,
+			exit_loop_completed_at, exit_finished_at, exit_success, contained,
+			last_offline_email, last_software_update_email, noise_proto, noise_public_key,
+			debounce_limit, features
+		FROM nodes
+		WHERE LOWER(email) = LOWER(?)
+		ORDER BY id
+		LIMIT ?
+	`), email, limit))(func(rows tagsql.Rows) error {
+		for rows.Next() {
+			var dbxNode dbx.Node
+			err := rows.Scan(&dbxNode.Id, &dbxNode.Address, &dbxNode.LastNet, &dbxNode.LastIpPort,
+				&dbxNode.CountryCode, &dbxNode.Protocol, &dbxNode.Email, &dbxNode.Wallet,
+				&dbxNode.WalletFeatures, &dbxNode.FreeDisk, &dbxNode.PieceCount, &dbxNode.Major,
+				&dbxNode.Minor, &dbxNode.Patch, &dbxNode.CommitHash, &dbxNode.ReleaseTimestamp,
+				&dbxNode.Release, &dbxNode.Latency90, &dbxNode.VettedAt, &dbxNode.CreatedAt,
+				&dbxNode.UpdatedAt, &dbxNode.LastContactSuccess, &dbxNode.LastContactFailure,
+				&dbxNode.Disqualified, &dbxNode.DisqualificationReason, &dbxNode.UnknownAuditSuspended,
+				&dbxNode.OfflineSuspended, &dbxNode.UnderReview, &dbxNode.ExitInitiatedAt,
+				&dbxNode.ExitLoopCompletedAt, &dbxNode.ExitFinishedAt, &dbxNode.ExitSuccess,
+				&dbxNode.Contained, &dbxNode.LastOfflineEmail, &dbxNode.LastSoftwareUpdateEmail,
+				&dbxNode.NoiseProto, &dbxNode.NoisePublicKey, &dbxNode.DebounceLimit, &dbxNode.Features)
+			if err != nil {
+				return err
+			}
+
+			dossier, err := convertDBNode(ctx, &dbxNode)
+			if err != nil {
+				return err
+			}
+			nodes = append(nodes, dossier)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, Error.Wrap(err)
+	}
+
+	return nodes, nil
+}
+
 func (cache *overlaycache) TestUpdateCheckInDirectUpdate(ctx context.Context, node overlay.NodeCheckInInfo, timestamp time.Time, semVer version.SemVer, walletFeatures string) (updated bool, err error) {
 	return cache.updateCheckInDirectUpdate(ctx, node, timestamp, semVer, walletFeatures)
 }

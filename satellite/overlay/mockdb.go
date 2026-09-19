@@ -254,3 +254,8 @@ func (m *Mockdb) AccountingNodeInfo(ctx context.Context, nodeIDs storj.NodeIDLis
 func (m *Mockdb) GetNodesByEmail(ctx context.Context, options GetNodesByEmailOptions) ([]*NodeDossier, *NodesByEmailCursor, error) {
 	panic("implement me")
 }
+
+// GetNodesByEmailInsensitive returns up to limit nodes whose operator email matches email, ignoring case.
+func (m *Mockdb) GetNodesByEmailInsensitive(ctx context.Context, email string, limit int) ([]*NodeDossier, error) {
+	panic("implement me")
+}
