@@ -44,6 +44,7 @@ import (
 	"storj.io/storj/satellite/console/consoleauth"
 	"storj.io/storj/satellite/console/consoleauth/csrf"
 	"storj.io/storj/satellite/console/consoleauth/sso"
+	"storj.io/storj/satellite/console/consoleext"
 	"storj.io/storj/satellite/console/consoleservice"
 	"storj.io/storj/satellite/console/consoleweb"
 	"storj.io/storj/satellite/console/dbcleanup"
@@ -140,6 +141,7 @@ func Module(ball *mud.Ball) {
 	// initialize here due to circular dependencies
 	mud.Provide[*consoleweb.Server](ball, CreateServer)
 	consoleweb.Module(ball)
+	consoleext.Module(ball)
 	{
 		mud.Provide[extensions.RevocationDB](ball, revocation.OpenDBFromCfg)
 		mud.Provide[rpc.Dialer](ball, rpc.NewDefaultPooledDialer)
@@ -514,7 +516,9 @@ func CreateServer(logger *zap.Logger,
 	stripeCfg stripe.Config,
 	storjscanCfg storjscan.Config,
 	afCfg accountfreeze.Config,
-	pc paymentsconfig.Config) (*consoleweb.Server, error) {
+	pc paymentsconfig.Config,
+
+	consoleExtensions []consoleext.Extension) (*consoleweb.Server, error) {
 
 	listener, err := net.Listen("tcp", cwconfig.Address)
 	if err != nil {
@@ -539,7 +543,8 @@ func CreateServer(logger *zap.Logger,
 
 	return consoleweb.NewServer(logger, *cwconfig, service, consoleService, oidcService, mailService, hubspotMailService, analytics, abTesting,
 		accountFreezeService, ssoService, csrfService, listener, stripePublicKey, storjscanCfg.Confirmations, nodeURL,
-		analyticsConfig, pc.MinimumCharge, prices, summaries, pc.LegacyPricingUserAgents, ecfg.Enabled, ssoCfg.Enabled, afCfg.OptOutFreezeOptedOutOnly), nil
+		analyticsConfig, pc.MinimumCharge, prices, summaries, pc.LegacyPricingUserAgents, ecfg.Enabled, ssoCfg.Enabled, afCfg.OptOutFreezeOptedOutOnly,
+		consoleExtensions), nil
 }
 
 // CreateService creates console service.

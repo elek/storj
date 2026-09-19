@@ -684,6 +684,8 @@ func NewConsoleAPI(log *zap.Logger, full *identity.FullIdentity, db DB,
 			config.Entitlements.Enabled,
 			config.SSO.Enabled,
 			config.AccountFreeze.OptOutFreezeOptedOutOnly,
+			// console extensions are only wired up on the modular (mud) path.
+			nil,
 		)
 
 		peer.Servers.Add(lifecycle.Item{

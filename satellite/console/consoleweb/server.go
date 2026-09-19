@@ -43,6 +43,7 @@ import (
 	"storj.io/storj/satellite/console/consoleauth"
 	"storj.io/storj/satellite/console/consoleauth/csrf"
 	"storj.io/storj/satellite/console/consoleauth/sso"
+	"storj.io/storj/satellite/console/consoleext"
 	"storj.io/storj/satellite/console/consoleservice"
 	"storj.io/storj/satellite/console/consoleweb/consoleapi"
 	"storj.io/storj/satellite/console/consoleweb/consoleapi/privateapi"
@@ -183,6 +184,9 @@ type Server struct {
 	abTesting          *abtesting.Service
 	csrfService        *csrf.Service
 
+	// extensions are satellite-specific console features registering their own routes.
+	extensions []consoleext.Extension
+
 	listener           net.Listener
 	server             http.Server
 	router             *mux.Router
@@ -225,10 +229,12 @@ func NewServer(logger *zap.Logger, config Config, service *console.Service, cons
 	stripePublicKey string, neededTokenPaymentConfirmations int, nodeURL storj.NodeURL,
 	analyticsConfig analytics.Config,
 	minimumChargeConfig paymentsconfig.MinimumChargeConfig, usagePrices payments.ProjectUsagePriceModel, pps ProductPriceSummaries,
-	legacyPricingUserAgents []string, entitlementsEnabled bool, ssoEnabled bool, optOutFreezeOptedOutOnly bool) *Server {
+	legacyPricingUserAgents []string, entitlementsEnabled bool, ssoEnabled bool, optOutFreezeOptedOutOnly bool,
+	extensions []consoleext.Extension) *Server {
 	initAdditionalMimeTypes()
 
 	server := Server{
+		extensions:                      extensions,
 		log:                             logger,
 		config:                          config,
 		listener:                        listener,
@@ -587,6 +593,13 @@ func NewServer(logger *zap.Logger, config Config, service *console.Service, cons
 		)))
 		ssoRouter.Handle("/{provider}/post-logout", server.ipRateLimiter.Limit(http.HandlerFunc(authController.SsoPostLogout))).Methods(http.MethodGet, http.MethodOptions)
 		ssoRouter.Handle("/{provider}/post-logout-confirm", server.ipRateLimiter.Limit(http.HandlerFunc(authController.SsoPostLogoutConfirm))).Methods(http.MethodGet, http.MethodOptions)
+	}
+
+	// N.B. extensions register before the generated API catch-all below, since
+	// mux matches routes in registration order.
+	for _, ext := range server.extensions {
+		logger.Debug("registering console extension", zap.String("name", ext.Name()))
+		ext.Register(router, consoleext.Deps{WithAuth: server.withAuth})
 	}
 
 	if server.config.GeneratedAPIEnabled {
