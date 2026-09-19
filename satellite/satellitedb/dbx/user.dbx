@@ -280,6 +280,11 @@ model registration_token (
 	field user_kind int ( nullable )
 
 	// partner is the optional parameter, used to inform 'partner' when the user registers with this token.
+	//
+	// N.B. the node invites chore (satellite/nodeinvites) stores the invited node operator's
+	// email here instead, which is how it tracks who it has already invited. An email address
+	// never matches a configured partner name, so the notification lookup ignores those rows.
+	// Anything reading this column has to tolerate both.
 	field partner text ( nullable )
 
 	// created_at indicates when the token was created.

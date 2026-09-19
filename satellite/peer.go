@@ -62,6 +62,7 @@ import (
 	"storj.io/storj/satellite/metainfo/expireddeletion"
 	"storj.io/storj/satellite/nodeapiversion"
 	"storj.io/storj/satellite/nodeevents"
+	"storj.io/storj/satellite/nodeinvites"
 	"storj.io/storj/satellite/nodeselection"
 	"storj.io/storj/satellite/nodeselection/tracker"
 	"storj.io/storj/satellite/oidc"
@@ -110,6 +111,8 @@ type DB interface {
 	NodeEvents() nodeevents.DB
 	// ProjectLimitEvents returns a database for project limit event information
 	ProjectLimitEvents() projectlimitevents.DB
+	// NodeInvites returns a database for selecting node operators to invite
+	NodeInvites() nodeinvites.DB
 	// Reputation returns database for audit reputation information
 	Reputation() reputation.DB
 	// Attribution returns database for partner keys information

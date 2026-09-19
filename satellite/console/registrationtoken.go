@@ -65,6 +65,11 @@ type RegistrationToken struct {
 	UserKind *UserKind `json:"userKind,omitempty"`
 
 	// Partner defines the 'partner' which should be informed when this token is used.
+	//
+	// N.B. the node invites chore (satellite/nodeinvites) stores the invited node operator's
+	// email here instead, which is how it tracks who it has already invited. An email address
+	// never matches a configured partner name, so the notification lookup ignores those rows.
+	// Anything reading this field has to tolerate both.
 	Partner *string `json:"partner,omitempty"`
 
 	CreatedAt time.Time `json:"createdAt"`

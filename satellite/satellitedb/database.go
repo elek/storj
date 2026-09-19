@@ -23,6 +23,7 @@ import (
 	"storj.io/storj/satellite/console"
 	"storj.io/storj/satellite/nodeapiversion"
 	"storj.io/storj/satellite/nodeevents"
+	"storj.io/storj/satellite/nodeinvites"
 	"storj.io/storj/satellite/oidc"
 	"storj.io/storj/satellite/orders"
 	"storj.io/storj/satellite/overlay"
@@ -200,6 +201,11 @@ func (dbc *satelliteDBCollection) NodeEvents() nodeevents.DB {
 // ProjectLimitEvents is a getter for project limit events repository.
 func (dbc *satelliteDBCollection) ProjectLimitEvents() projectlimitevents.DB {
 	return &projectLimitEvents{db: dbc.getByName("projectlimitevents")}
+}
+
+// NodeInvites is a getter for the node operator invite candidate repository.
+func (dbc *satelliteDBCollection) NodeInvites() nodeinvites.DB {
+	return &nodeInvites{db: dbc.getByName("nodeinvites")}
 }
 
 // Reputation is a getter for overlay cache repository.
