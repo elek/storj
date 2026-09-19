@@ -26,6 +26,7 @@ import (
 	"storj.io/storj/satellite/payments/storjscan"
 	"storj.io/storj/satellite/projectlimitevents"
 	"storj.io/storj/satellite/repair/repairer"
+	"storj.io/storj/satellite/statsexport"
 	"storj.io/storj/shared/mud"
 )
 
@@ -62,5 +63,6 @@ func (a *Core) GetSelector(ball *mud.Ball) mud.ComponentSelector {
 		mud.Select[*dbcleanup.Chore](ball),
 		mud.Select[*pendingdelete.Chore](ball),
 		mud.Select[*projectlimitevents.Chore](ball),
+		mud.Select[*statsexport.Chore](ball),
 	)
 }

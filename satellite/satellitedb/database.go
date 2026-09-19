@@ -36,6 +36,7 @@ import (
 	"storj.io/storj/satellite/satellitedb/consoledb"
 	"storj.io/storj/satellite/satellitedb/dbx"
 	"storj.io/storj/satellite/snopayouts"
+	"storj.io/storj/satellite/statsexport"
 	"storj.io/storj/shared/dbutil"
 	"storj.io/storj/shared/dbutil/pgutil"
 	"storj.io/storj/shared/flightrecorder"
@@ -206,6 +207,11 @@ func (dbc *satelliteDBCollection) ProjectLimitEvents() projectlimitevents.DB {
 // NodeInvites is a getter for the node operator invite candidate repository.
 func (dbc *satelliteDBCollection) NodeInvites() nodeinvites.DB {
 	return &nodeInvites{db: dbc.getByName("nodeinvites")}
+}
+
+// StatsExport is a getter for the network statistics repository.
+func (dbc *satelliteDBCollection) StatsExport() statsexport.DB {
+	return &statsExport{db: dbc.getByName("statsexport")}
 }
 
 // Reputation is a getter for overlay cache repository.

@@ -102,6 +102,7 @@ import (
 	"storj.io/storj/satellite/reputation"
 	srevocation "storj.io/storj/satellite/revocation"
 	"storj.io/storj/satellite/snopayouts"
+	"storj.io/storj/satellite/statsexport"
 	"storj.io/storj/satellite/taskqueue"
 	"storj.io/storj/satellite/webhook"
 	sndebug "storj.io/storj/shared/debug"
@@ -202,6 +203,7 @@ func Module(ball *mud.Ball) {
 	mud.View[DB, nodeevents.DB](ball, DB.NodeEvents)
 	mud.View[DB, projectlimitevents.DB](ball, DB.ProjectLimitEvents)
 	mud.View[DB, nodeinvites.DB](ball, DB.NodeInvites)
+	mud.View[DB, statsexport.DB](ball, DB.StatsExport)
 
 	piecelist.Module(ball)
 
@@ -494,6 +496,7 @@ func Module(ball *mud.Ball) {
 	mud.Provide[*admin.Server](ball, CreateAdminServer)
 	projectlimitevents.Module(ball)
 	nodeinvites.Module(ball)
+	statsexport.Module(ball)
 }
 
 // EndpointRegistration is a pseudo component to wire server and DRPC endpoints together.

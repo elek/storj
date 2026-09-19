@@ -80,6 +80,7 @@ import (
 	"storj.io/storj/satellite/reputation"
 	"storj.io/storj/satellite/revocation"
 	"storj.io/storj/satellite/snopayouts"
+	"storj.io/storj/satellite/statsexport"
 	"storj.io/storj/satellite/webhook"
 	"storj.io/storj/shared/dbutil"
 	"storj.io/storj/shared/flightrecorder"
@@ -113,6 +114,8 @@ type DB interface {
 	ProjectLimitEvents() projectlimitevents.DB
 	// NodeInvites returns a database for selecting node operators to invite
 	NodeInvites() nodeinvites.DB
+	// StatsExport returns a database for reading network-wide statistics
+	StatsExport() statsexport.DB
 	// Reputation returns database for audit reputation information
 	Reputation() reputation.DB
 	// Attribution returns database for partner keys information
