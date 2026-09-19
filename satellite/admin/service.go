@@ -59,7 +59,7 @@ type Service struct {
 	accountFreeze *console.AccountFreezeService
 	accounting    *accounting.Service
 	buckets       *buckets.Service
-	analytics     *analytics.Service
+	analytics     analytics.Service
 	entitlements  *entitlements.Service
 	restKeys      restapikeys.Service
 	payments      payments.Accounts
@@ -87,7 +87,7 @@ func NewService(
 	accounting *accounting.Service,
 	authorizer *Authorizer,
 	accountFreeze *console.AccountFreezeService,
-	analytics *analytics.Service,
+	analytics analytics.Service,
 	buckets *buckets.Service,
 	entitlements *entitlements.Service,
 	metabaseDB *metabase.DB,

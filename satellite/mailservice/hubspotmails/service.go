@@ -56,13 +56,13 @@ type Service struct {
 	httpClient *http.Client
 	config     Config
 
-	analytics *analytics.Service
+	analytics analytics.Service
 
 	sending sync.WaitGroup
 }
 
 // NewService creates a new Service instance.
-func NewService(log *zap.Logger, analytics *analytics.Service, config Config) *Service {
+func NewService(log *zap.Logger, analytics analytics.Service, config Config) *Service {
 	return &Service{
 		log:    log,
 		config: config,

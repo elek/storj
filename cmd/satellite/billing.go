@@ -93,7 +93,7 @@ func setupPayments(log *zap.Logger, db satellite.DB) (*stripe.Service, error) {
 			FreezeEventsDB:       db.Console().AccountFreezeEvents(),
 			UsageDB:              db.ProjectAccounting(),
 			RetentionRemainderDB: db.RetentionRemainderCharges(),
-			Analytics:            analytics.NewService(log.Named("analytics:service"), runCfg.Analytics, runCfg.Console.SatelliteName, runCfg.Console.ExternalAddress),
+			Analytics:            analytics.NewSegmentService(log.Named("analytics:service"), runCfg.Analytics, runCfg.Console.SatelliteName, runCfg.Console.ExternalAddress),
 			Emission:             emission.NewService(runCfg.Emission),
 			Entitlements:         entitlements.NewService(log.Named("entitlements:service"), db.Console().Entitlements()),
 		},

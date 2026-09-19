@@ -24,7 +24,7 @@ type UpgradeUserObserver struct {
 	usageLimitsConfig     UsageLimitsConfig
 	userBalanceForUpgrade int64
 	freezeService         *AccountFreezeService
-	analyticsService      *analytics.Service
+	analyticsService      analytics.Service
 	mailService           *mailservice.Service
 
 	satelliteAddress string
@@ -33,7 +33,7 @@ type UpgradeUserObserver struct {
 }
 
 // NewUpgradeUserObserver creates new observer instance.
-func NewUpgradeUserObserver(consoleDB DB, transactionsDB billing.TransactionsDB, usageLimitsConfig UsageLimitsConfig, userBalanceForUpgrade int64, satelliteAddress string, freezeService *AccountFreezeService, analyticsService *analytics.Service, mailService *mailservice.Service) *UpgradeUserObserver {
+func NewUpgradeUserObserver(consoleDB DB, transactionsDB billing.TransactionsDB, usageLimitsConfig UsageLimitsConfig, userBalanceForUpgrade int64, satelliteAddress string, freezeService *AccountFreezeService, analyticsService analytics.Service, mailService *mailservice.Service) *UpgradeUserObserver {
 	return &UpgradeUserObserver{
 		consoleDB:             consoleDB,
 		transactionsDB:        transactionsDB,

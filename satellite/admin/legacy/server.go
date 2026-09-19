@@ -85,7 +85,7 @@ type Server struct {
 	payments       payments.Accounts
 	buckets        *buckets.Service
 	restKeys       restapikeys.Service
-	analytics      *analytics.Service
+	analytics      analytics.Service
 	freezeAccounts *console.AccountFreezeService
 	entitlements   *entitlements.Service
 
@@ -107,7 +107,7 @@ func NewServer(
 	buckets *buckets.Service,
 	restKeys restapikeys.Service,
 	freezeAccounts *console.AccountFreezeService,
-	analyticsService *analytics.Service,
+	analyticsService analytics.Service,
 	accounts payments.Accounts,
 	entitlements *entitlements.Service,
 	placement nodeselection.PlacementDefinitions,

@@ -104,7 +104,7 @@ func NewServer(
 	buckets *buckets.Service,
 	restKeys restapikeys.Service,
 	freezeAccounts *console.AccountFreezeService,
-	analyticsService *analytics.Service,
+	analyticsService analytics.Service,
 	accounts payments.Accounts,
 	service *Service,
 	entitlements *entitlements.Service,

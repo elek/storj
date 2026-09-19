@@ -108,7 +108,7 @@ func TestChore(t *testing.T) {
 		userBalanceForUpgrade int64,
 		satelliteAddress string,
 		freezeService *console.AccountFreezeService,
-		analyticsService *analytics.Service,
+		analyticsService analytics.Service,
 		mailService *mailservice.Service,
 	) {
 		paymentTypes := []billing.PaymentType{

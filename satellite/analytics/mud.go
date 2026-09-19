@@ -11,5 +11,9 @@ import (
 // Module is a mud module.
 func Module(ball *mud.Ball) {
 	config.RegisterConfig[Config](ball, "analytics")
-	mud.RegisterInterfaceImplementation[FreezeTracker, *Service](ball)
+	mud.Provide[*NoopService](ball, NewNoopService)
+
+	// *SegmentService is provided by satellite.Module, as it depends on consoleweb.Config.
+	mud.RegisterInterfaceImplementation[Service, *SegmentService](ball)
+	mud.RegisterInterfaceImplementation[FreezeTracker, Service](ball)
 }

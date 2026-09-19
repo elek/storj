@@ -19,7 +19,7 @@ func Module(ball *mud.Ball) {
 
 	mud.Provide[*Authorizer](ball, NewAuthorizer)
 
-	mud.Provide[*auditlogger.Logger](ball, func(log *zap.Logger, analyticsService *analytics.Service, history changehistory.DB, cfg Config) *auditlogger.Logger {
+	mud.Provide[*auditlogger.Logger](ball, func(log *zap.Logger, analyticsService analytics.Service, history changehistory.DB, cfg Config) *auditlogger.Logger {
 		return auditlogger.New(log.Named("audit-logger"), analyticsService, history, cfg.ExternalAddress, cfg.AuditLogger)
 	})
 

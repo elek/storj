@@ -67,7 +67,7 @@ type Auth struct {
 
 	service              *console.Service
 	accountFreezeService *console.AccountFreezeService
-	analytics            *analytics.Service
+	analytics            analytics.Service
 	mailService          *mailservice.Service
 	ssoService           *sso.Service
 	csrfService          *csrf.Service
@@ -80,7 +80,7 @@ type Auth struct {
 // NewAuth is a constructor for api auth controller.
 func NewAuth(
 	log *zap.Logger, service *console.Service, accountFreezeService *console.AccountFreezeService, mailService *mailservice.Service,
-	cookieAuth *consolewebauth.CookieAuth, analytics *analytics.Service, ssoService *sso.Service, csrfService *csrf.Service,
+	cookieAuth *consolewebauth.CookieAuth, analytics analytics.Service, ssoService *sso.Service, csrfService *csrf.Service,
 	satelliteName, externalAddress, letUsKnowURL, termsAndConditionsURL, contactInfoURL, generalRequestURL string,
 	activationCodeEnabled, memberAccountsEnabled bool, badPasswords map[string]struct{}, badPasswordsEncoded string, validAnnouncementNames []string,
 	singleWhiteLabel console.SingleWhiteLabelConfig, partnerAdminEmailMapping console.PartnerAdminEmailMapping, ssoEnabled bool,

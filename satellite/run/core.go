@@ -37,7 +37,7 @@ type Core struct {
 func (a *Core) GetSelector(ball *mud.Ball) mud.ComponentSelector {
 	return mud.Or(
 		Observability(ball),
-		mud.Select[*analytics.Service](ball),
+		mud.Select[analytics.Service](ball),
 		mud.Select[*mailservice.Service](ball),
 		mud.Select[*emailreminders.Chore](ball),
 		mud.Select[*overlay.Service](ball),

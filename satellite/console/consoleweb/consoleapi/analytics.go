@@ -25,11 +25,11 @@ var ErrAnalyticsAPI = errs.Class("consoleapi analytics")
 type Analytics struct {
 	log       *zap.Logger
 	service   *console.Service
-	analytics *analytics.Service
+	analytics analytics.Service
 }
 
 // NewAnalytics is a constructor for api analytics controller.
-func NewAnalytics(log *zap.Logger, service *console.Service, a *analytics.Service) *Analytics {
+func NewAnalytics(log *zap.Logger, service *console.Service, a analytics.Service) *Analytics {
 	return &Analytics{
 		log:       log,
 		service:   service,

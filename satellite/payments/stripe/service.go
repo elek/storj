@@ -70,7 +70,7 @@ type ServiceDependencies struct {
 	FreezeEventsDB       console.AccountFreezeEvents
 	UsageDB              accounting.ProjectAccounting
 	RetentionRemainderDB accounting.RetentionRemainderDB
-	Analytics            *analytics.Service
+	Analytics            analytics.Service
 	Emission             *emission.Service
 	Entitlements         *entitlements.Service
 }
@@ -111,7 +111,7 @@ type Service struct {
 	freezeEventsDB       console.AccountFreezeEvents
 	usageDB              accounting.ProjectAccounting
 	retentionRemainderDB accounting.RetentionRemainderDB
-	analytics            *analytics.Service
+	analytics            analytics.Service
 	emission             *emission.Service
 	entitlements         *entitlements.Service
 

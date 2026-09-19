@@ -61,7 +61,7 @@ type Admin struct {
 	}
 
 	Analytics struct {
-		Service *analytics.Service
+		Service analytics.Service
 	}
 
 	Entitlements struct {
@@ -174,7 +174,7 @@ func NewAdmin(log *zap.Logger, full *identity.FullIdentity, db DB, metabaseDB *m
 	}
 
 	{ // setup analytics
-		peer.Analytics.Service = analytics.NewService(peer.Log.Named("analytics:service"), config.Analytics, config.Console.SatelliteName, config.Console.ExternalAddress)
+		peer.Analytics.Service = analytics.NewSegmentService(peer.Log.Named("analytics:service"), config.Analytics, config.Console.SatelliteName, config.Console.ExternalAddress)
 
 		peer.Services.Add(lifecycle.Item{
 			Name:  "analytics:service",

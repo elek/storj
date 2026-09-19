@@ -223,7 +223,7 @@ func Module(ball *mud.Ball) {
 		return p
 	})
 	// TODO: need to define here due to circular dependencies
-	mud.Provide[*console.UpgradeUserObserver](ball, func(consoleDB console.DB, transactionsDB billing.TransactionsDB, cfg consoleweb.Config, freezeService *console.AccountFreezeService, analyticsService *analytics.Service, mailService *mailservice.Service) *console.UpgradeUserObserver {
+	mud.Provide[*console.UpgradeUserObserver](ball, func(consoleDB console.DB, transactionsDB billing.TransactionsDB, cfg consoleweb.Config, freezeService *console.AccountFreezeService, analyticsService analytics.Service, mailService *mailservice.Service) *console.UpgradeUserObserver {
 		return console.NewUpgradeUserObserver(consoleDB, transactionsDB, cfg.UsageLimits, cfg.UserBalanceForUpgrade, cfg.ExternalAddress, freezeService, analyticsService, mailService)
 	})
 
@@ -250,8 +250,8 @@ func Module(ball *mud.Ball) {
 	mailservice.Module(ball)
 	analytics.Module(ball)
 	// TODO: we must keep it here as it uses consoleweb.Config from analytics package.
-	mud.Provide[*analytics.Service](ball, func(log *zap.Logger, config analytics.Config, consoleConfig consoleweb.Config) *analytics.Service {
-		return analytics.NewService(log, config, consoleConfig.SatelliteName, consoleConfig.ExternalAddress)
+	mud.Provide[*analytics.SegmentService](ball, func(log *zap.Logger, config analytics.Config, consoleConfig consoleweb.Config) *analytics.SegmentService {
+		return analytics.NewSegmentService(log, config, consoleConfig.SatelliteName, consoleConfig.ExternalAddress)
 	})
 	abtesting.Module(ball)
 	hubspotmails.Module(ball)
@@ -506,7 +506,7 @@ func CreateServer(logger *zap.Logger,
 	oidcService *oidc.Service,
 	mailService *mailservice.Service,
 	hubspotMailService *hubspotmails.Service,
-	analytics *analytics.Service,
+	analytics analytics.Service,
 	abTesting *abtesting.Service,
 	accountFreezeService *console.AccountFreezeService,
 	ssoService *sso.Service,
@@ -556,7 +556,7 @@ func CreateServer(logger *zap.Logger,
 // TODO: due to circular dependencies, we couldn't put this to console.Module (consoleweb.Config)
 func CreateService(log *zap.Logger, store console.DB, restKeys restapikeys.DB, oauthRestKeys restapikeys.Service, projectAccounting accounting.ProjectAccounting,
 	projectUsage *accounting.Service, buckets buckets.DB, attributions attribution.DB, accounts payments.Accounts, depositWallets payments.DepositWallets,
-	billingDb billing.TransactionsDB, analytics *analytics.Service, tokens *consoleauth.Service, mailService *mailservice.Service, hubspotMailService *hubspotmails.Service,
+	billingDb billing.TransactionsDB, analytics analytics.Service, tokens *consoleauth.Service, mailService *mailservice.Service, hubspotMailService *hubspotmails.Service,
 	accountFreezeService *console.AccountFreezeService, emission *emission.Service, kmsService *kms.Service, ssoService *sso.Service,
 	placements nodeselection.PlacementDefinitions, valdiService *valdi.Service, webhookService *webhook.Service,
 	entitlementsService *entitlements.Service, entitlementsConfig entitlements.Config, nodeURL storj.NodeURL, cw consoleweb.Config, cfg console.Config, mcfg metainfo.Config, ssoCfg sso.Config, pc paymentsconfig.Config) (*console.Service, error) {
@@ -589,7 +589,7 @@ func CreateAdminServer(log *zap.Logger,
 	buckets *buckets.Service,
 	restKeys restapikeys.Service,
 	freezeAccounts *console.AccountFreezeService,
-	analyticsService *analytics.Service,
+	analyticsService analytics.Service,
 	accounts payments.Accounts,
 	service *admin.Service,
 	entitlements *entitlements.Service,

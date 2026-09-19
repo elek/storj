@@ -258,7 +258,7 @@ type Service struct {
 	billing                    billing.TransactionsDB
 	registrationCaptchaHandler CaptchaHandler
 	loginCaptchaHandler        CaptchaHandler
-	analytics                  *analytics.Service
+	analytics                  analytics.Service
 	tokens                     *consoleauth.Service
 	mailService                *mailservice.Service
 	hubspotMailService         *hubspotmails.Service
@@ -365,7 +365,7 @@ type Payments struct {
 // NewService returns new instance of Service.
 func NewService(log *zap.Logger, store DB, restKeys restapikeys.DB, oauthRestKeys restapikeys.Service, projectAccounting accounting.ProjectAccounting,
 	projectUsage *accounting.Service, buckets buckets.DB, attributions attribution.DB, accounts payments.Accounts, depositWallets payments.DepositWallets,
-	billingDb billing.TransactionsDB, analytics *analytics.Service, tokens *consoleauth.Service, mailService *mailservice.Service, hubspotMailService *hubspotmails.Service,
+	billingDb billing.TransactionsDB, analytics analytics.Service, tokens *consoleauth.Service, mailService *mailservice.Service, hubspotMailService *hubspotmails.Service,
 	accountFreezeService *AccountFreezeService, emission *emission.Service, kmsService *kms.Service, ssoService *sso.Service, satelliteAddress string,
 	satelliteNodeURL string, satelliteName string, singleWhiteLabel SingleWhiteLabelConfig, maxProjectBuckets int, ssoEnabled bool, placements nodeselection.PlacementDefinitions,
 	valdiService *valdi.Service, webhookService *webhook.Service, minimumChargeAmount int64,

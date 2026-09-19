@@ -40,7 +40,7 @@ type Event struct {
 // Logger implements Logger using Segment analytics service.
 type Logger struct {
 	log       *zap.Logger
-	analytics *analytics.Service
+	analytics analytics.Service
 
 	changeHistory changehistory.DB
 	changeEvents  chan Event
@@ -53,7 +53,7 @@ type Logger struct {
 }
 
 // New creates a new Logger.
-func New(log *zap.Logger, analytics *analytics.Service, changeHistory changehistory.DB, externalAddress string, config Config) *Logger {
+func New(log *zap.Logger, analytics analytics.Service, changeHistory changehistory.DB, externalAddress string, config Config) *Logger {
 	return &Logger{
 		log:       log,
 		analytics: analytics,

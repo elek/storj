@@ -180,7 +180,7 @@ type Server struct {
 	consoleService     *consoleservice.Service // this is a duplicate of service, but should replace it in the future.
 	mailService        *mailservice.Service
 	hubspotMailService *hubspotmails.Service
-	analytics          *analytics.Service
+	analytics          analytics.Service
 	abTesting          *abtesting.Service
 	csrfService        *csrf.Service
 
@@ -224,7 +224,7 @@ type Server struct {
 
 // NewServer creates new instance of console server.
 func NewServer(logger *zap.Logger, config Config, service *console.Service, consoleService *consoleservice.Service, oidcService *oidc.Service,
-	mailService *mailservice.Service, hubspotMailService *hubspotmails.Service, analytics *analytics.Service, abTesting *abtesting.Service,
+	mailService *mailservice.Service, hubspotMailService *hubspotmails.Service, analytics analytics.Service, abTesting *abtesting.Service,
 	accountFreezeService *console.AccountFreezeService, ssoService *sso.Service, csrfService *csrf.Service, listener net.Listener,
 	stripePublicKey string, neededTokenPaymentConfirmations int, nodeURL storj.NodeURL,
 	analyticsConfig analytics.Config,
