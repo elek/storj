@@ -238,6 +238,18 @@
                 </template>
             </navigation-item>
 
+            <!-- Extensions -->
+            <navigation-item
+                v-for="item in extensionNavItems"
+                :key="item.to"
+                :title="item.title"
+                :to="item.to"
+            >
+                <template #prepend>
+                    <component :is="item.icon" :size="18" />
+                </template>
+            </navigation-item>
+
             <!-- Resources Menu -->
             <v-menu location="end" transition="scale-transition">
                 <template #activator="{ props: activatorProps }">
@@ -370,6 +382,7 @@ import { ROUTES } from '@/router';
 import { usePreCheck } from '@/composables/usePreCheck';
 import { useConfigStore } from '@/store/modules/configStore';
 import { ProjectRole } from '@/types/projectMembers';
+import { extensionNavItems } from '@/extensions';
 
 import CreateProjectDialog from '@/components/dialogs/CreateProjectDialog.vue';
 import ManagePassphraseDialog from '@/components/dialogs/ManagePassphraseDialog.vue';

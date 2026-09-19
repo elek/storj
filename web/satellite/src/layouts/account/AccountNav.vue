@@ -58,6 +58,20 @@
 
                 <v-divider class="my-2" />
 
+                <!-- Extensions -->
+                <navigation-item
+                    v-for="item in extensionNavItems"
+                    :key="item.to"
+                    :title="item.title"
+                    :to="item.to"
+                    class="py-2"
+                    @click="closeDrawer"
+                >
+                    <template #prepend>
+                        <component :is="item.icon" :size="18" />
+                    </template>
+                </navigation-item>
+
                 <v-menu location="end" transition="scale-transition">
                     <template #activator="{ props: activatorProps }">
                         <navigation-item title="Resources" v-bind="activatorProps">
@@ -167,6 +181,7 @@ import { useConfigStore } from '@/store/modules/configStore';
 import { useUsersStore } from '@/store/modules/usersStore.js';
 import { ROUTES } from '@/router';
 import { AnalyticsEvent } from '@/utils/constants/analyticsEventNames.js';
+import { extensionNavItems } from '@/extensions';
 
 import NavigationItem from '@/layouts/shared/NavigationItem.vue';
 

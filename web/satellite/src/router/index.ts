@@ -9,6 +9,7 @@ import { useAppStore } from '@/store/modules/appStore';
 import { NavigationLink } from '@/types/navigation';
 import { useAnalyticsStore } from '@/store/modules/analyticsStore';
 import { defaultBrandingName } from '@/types/config';
+import { extensionRoutes } from '@/extensions';
 
 enum RouteName {
     Account = 'Account',
@@ -178,6 +179,14 @@ const routes: RouteRecordRaw[] = [
                 component: () => import(/* webpackChunkName: "MyAccount" */ '@/views/AccountSettings.vue'),
             },
         ],
+    },
+    {
+        // Extension routes render in the account layout and set the back path the
+        // same way the account pages do, so returning to a project still works.
+        path: '/',
+        component: () => import('@/layouts/account/AccountLayout.vue'),
+        beforeEnter: (_, from) => useAppStore().setPathBeforeAccountPage(from.path),
+        children: extensionRoutes,
     },
     {
         path: ROUTES.Projects.path,
