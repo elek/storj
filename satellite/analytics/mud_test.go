@@ -21,8 +21,8 @@ func TestModule(t *testing.T) {
 		analytics.Module(ball)
 
 		// satellite.Module provides this, as it depends on consoleweb.Config.
-		mud.Provide[*analytics.SegmentService](ball, func() *analytics.SegmentService {
-			return analytics.NewSegmentService(zaptest.NewLogger(t), analytics.Config{}, "test", "http://localhost")
+		mud.Provide[*analytics.ReportingService](ball, func() *analytics.ReportingService {
+			return analytics.NewReportingService(zaptest.NewLogger(t), analytics.Config{}, "test", "http://localhost")
 		})
 		return ball
 	}
@@ -34,8 +34,8 @@ func TestModule(t *testing.T) {
 		require.NoError(t, mud.ForEachDependency(ball, mud.All, mud.Initialize(ctx)))
 
 		require.NoError(t, mud.Execute0(ctx, ball, func(service analytics.Service, freezeTracker analytics.FreezeTracker) {
-			require.IsType(t, &analytics.SegmentService{}, service)
-			require.IsType(t, &analytics.SegmentService{}, freezeTracker)
+			require.IsType(t, &analytics.ReportingService{}, service)
+			require.IsType(t, &analytics.ReportingService{}, freezeTracker)
 		}))
 	})
 

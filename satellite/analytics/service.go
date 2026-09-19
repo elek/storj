@@ -292,12 +292,12 @@ type Service interface {
 	TestSetSatelliteExternalAddress(address string)
 }
 
-var _ Service = (*SegmentService)(nil)
+var _ Service = (*ReportingService)(nil)
 
-// SegmentService is the Service implementation reporting to Segment and HubSpot.
+// ReportingService is the Service implementation reporting to Segment and HubSpot.
 //
 // architecture: Service
-type SegmentService struct {
+type ReportingService struct {
 	log                      *zap.Logger
 	config                   Config
 	satelliteName            string
@@ -309,9 +309,9 @@ type SegmentService struct {
 	hubspot *HubSpotEvents
 }
 
-// NewSegmentService creates new service for creating sending analytics.
-func NewSegmentService(log *zap.Logger, config Config, satelliteName, satelliteExternalAddress string) *SegmentService {
-	service := &SegmentService{
+// NewReportingService creates a new Service, reporting to Segment and HubSpot.
+func NewReportingService(log *zap.Logger, config Config, satelliteName, satelliteExternalAddress string) *ReportingService {
+	service := &ReportingService{
 		log:                      log,
 		config:                   config,
 		satelliteName:            satelliteName,
@@ -348,7 +348,7 @@ func NewSegmentService(log *zap.Logger, config Config, satelliteName, satelliteE
 }
 
 // Run runs the service and use the context in new requests.
-func (service *SegmentService) Run(ctx context.Context) error {
+func (service *ReportingService) Run(ctx context.Context) error {
 	if !service.config.Enabled {
 		return nil
 	}
@@ -356,7 +356,7 @@ func (service *SegmentService) Run(ctx context.Context) error {
 }
 
 // Close closes the Segment client.
-func (service *SegmentService) Close() error {
+func (service *ReportingService) Close() error {
 	if service.segment == nil {
 		return nil
 	}
@@ -428,7 +428,7 @@ type UserFeedbackFormData struct {
 	AllowContact bool   `json:"allowContact"`
 }
 
-func (service *SegmentService) enqueueMessage(message segment.Message) {
+func (service *ReportingService) enqueueMessage(message segment.Message) {
 	if service.segment == nil {
 		return
 	}
@@ -439,7 +439,7 @@ func (service *SegmentService) enqueueMessage(message segment.Message) {
 }
 
 // TrackCreateUser sends an "Account Created" event to Segment and Hubspot.
-func (service *SegmentService) TrackCreateUser(fields TrackCreateUserFields) {
+func (service *ReportingService) TrackCreateUser(fields TrackCreateUserFields) {
 	if !service.config.Enabled {
 		return
 	}
@@ -507,7 +507,7 @@ func (service *SegmentService) TrackCreateUser(fields TrackCreateUserFields) {
 
 // TrackDeleteUser sends an "Account Deleted" event to Segment.
 // The adminInitiated parameter specifies whether the deletion was initiated by an admin action or by the user.
-func (service *SegmentService) TrackDeleteUser(userID uuid.UUID, email string, adminInitiated bool, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackDeleteUser(userID uuid.UUID, email string, adminInitiated bool, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -524,7 +524,7 @@ func (service *SegmentService) TrackDeleteUser(userID uuid.UUID, email string, a
 }
 
 // JoinPlacementWaitlist sends a join placement waitlist form to hubspot.
-func (service *SegmentService) JoinPlacementWaitlist(fields TrackJoinPlacementWaitlistFields) {
+func (service *ReportingService) JoinPlacementWaitlist(fields TrackJoinPlacementWaitlistFields) {
 	if !service.config.Enabled {
 		return
 	}
@@ -532,7 +532,7 @@ func (service *SegmentService) JoinPlacementWaitlist(fields TrackJoinPlacementWa
 }
 
 // ChangeContactEmail changes contact's email address.
-func (service *SegmentService) ChangeContactEmail(userID uuid.UUID, oldEmail, newEmail string) {
+func (service *ReportingService) ChangeContactEmail(userID uuid.UUID, oldEmail, newEmail string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -549,7 +549,7 @@ func (service *SegmentService) ChangeContactEmail(userID uuid.UUID, oldEmail, ne
 }
 
 // TrackUserOnboardingInfo sends onboarding info to Hubspot.
-func (service *SegmentService) TrackUserOnboardingInfo(fields TrackOnboardingInfoFields) {
+func (service *ReportingService) TrackUserOnboardingInfo(fields TrackOnboardingInfoFields) {
 	if !service.config.Enabled {
 		return
 	}
@@ -606,7 +606,7 @@ func (service *SegmentService) TrackUserOnboardingInfo(fields TrackOnboardingInf
 }
 
 // TrackSignedIn sends an "Signed In" event to Segment.
-func (service *SegmentService) TrackSignedIn(userID uuid.UUID, email, anonymousID string, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackSignedIn(userID uuid.UUID, email, anonymousID string, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -631,7 +631,7 @@ func (service *SegmentService) TrackSignedIn(userID uuid.UUID, email, anonymousI
 }
 
 // TrackProjectCreated sends an "Project Created" event to Segment.
-func (service *SegmentService) TrackProjectCreated(userID uuid.UUID, email string, projectID uuid.UUID, currentProjectCount int, managedPassphrase bool, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackProjectCreated(userID uuid.UUID, email string, projectID uuid.UUID, currentProjectCount int, managedPassphrase bool, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -655,7 +655,7 @@ func (service *SegmentService) TrackProjectCreated(userID uuid.UUID, email strin
 }
 
 // TrackProjectDeleted sends an "Project Deleted" event to Segment.
-func (service *SegmentService) TrackProjectDeleted(userID uuid.UUID, email string, publicProjectID uuid.UUID, currentMonthUsage string, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackProjectDeleted(userID uuid.UUID, email string, publicProjectID uuid.UUID, currentMonthUsage string, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -673,7 +673,7 @@ func (service *SegmentService) TrackProjectDeleted(userID uuid.UUID, email strin
 }
 
 // TrackLegacyProjectTiersMigrated sends a "Legacy Project Tiers Migrated" event to Segment.
-func (service *SegmentService) TrackLegacyProjectTiersMigrated(userID uuid.UUID, email string, publicProjectID uuid.UUID, newPlacementProductMapping string, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackLegacyProjectTiersMigrated(userID uuid.UUID, email string, publicProjectID uuid.UUID, newPlacementProductMapping string, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -691,7 +691,7 @@ func (service *SegmentService) TrackLegacyProjectTiersMigrated(userID uuid.UUID,
 }
 
 // TrackManagedEncryptionError sends an "Managed Encryption Error" event to Segment.
-func (service *SegmentService) TrackManagedEncryptionError(userID uuid.UUID, email string, projectID uuid.UUID, reason string, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackManagedEncryptionError(userID uuid.UUID, email string, projectID uuid.UUID, reason string, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -709,7 +709,7 @@ func (service *SegmentService) TrackManagedEncryptionError(userID uuid.UUID, ema
 }
 
 // TrackAccountFrozen sends an account frozen event to Segment.
-func (service *SegmentService) TrackAccountFrozen(userID uuid.UUID, email string, hubspotObjectID *string) {
+func (service *ReportingService) TrackAccountFrozen(userID uuid.UUID, email string, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -725,7 +725,7 @@ func (service *SegmentService) TrackAccountFrozen(userID uuid.UUID, email string
 }
 
 // TrackRequestLimitIncrease sends a limit increase request to Segment.
-func (service *SegmentService) TrackRequestLimitIncrease(userID uuid.UUID, email string, info LimitRequestInfo, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackRequestLimitIncrease(userID uuid.UUID, email string, info LimitRequestInfo, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -747,7 +747,7 @@ func (service *SegmentService) TrackRequestLimitIncrease(userID uuid.UUID, email
 }
 
 // TrackAccountUnfrozen sends an account unfrozen event to Segment.
-func (service *SegmentService) TrackAccountUnfrozen(userID uuid.UUID, email string, hubspotObjectID *string) {
+func (service *ReportingService) TrackAccountUnfrozen(userID uuid.UUID, email string, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -763,7 +763,7 @@ func (service *SegmentService) TrackAccountUnfrozen(userID uuid.UUID, email stri
 }
 
 // TrackGenericFreeze sends a generic account freeze event to Segment with the freeze type specified.
-func (service *SegmentService) TrackGenericFreeze(userID uuid.UUID, email, freezeType string, adminInitiated bool, hubspotObjectID *string) {
+func (service *ReportingService) TrackGenericFreeze(userID uuid.UUID, email, freezeType string, adminInitiated bool, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -783,7 +783,7 @@ func (service *SegmentService) TrackGenericFreeze(userID uuid.UUID, email, freez
 }
 
 // TrackGenericUnfreeze sends a generic account unfreeze event to Segment with the freeze type specified.
-func (service *SegmentService) TrackGenericUnfreeze(userID uuid.UUID, email, freezeType string, adminInitiated bool, hubspotObjectID *string) {
+func (service *ReportingService) TrackGenericUnfreeze(userID uuid.UUID, email, freezeType string, adminInitiated bool, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -803,7 +803,7 @@ func (service *SegmentService) TrackGenericUnfreeze(userID uuid.UUID, email, fre
 }
 
 // TrackAccountUnwarned sends an account unwarned event to Segment.
-func (service *SegmentService) TrackAccountUnwarned(userID uuid.UUID, email string, hubspotObjectID *string) {
+func (service *ReportingService) TrackAccountUnwarned(userID uuid.UUID, email string, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -819,7 +819,7 @@ func (service *SegmentService) TrackAccountUnwarned(userID uuid.UUID, email stri
 }
 
 // TrackAccountFreezeWarning sends an account freeze warning event to Segment.
-func (service *SegmentService) TrackAccountFreezeWarning(userID uuid.UUID, email string, hubspotObjectID *string) {
+func (service *ReportingService) TrackAccountFreezeWarning(userID uuid.UUID, email string, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -835,7 +835,7 @@ func (service *SegmentService) TrackAccountFreezeWarning(userID uuid.UUID, email
 }
 
 // TrackLargeUnpaidInvoice sends an event to Segment indicating that a user has not paid a large invoice.
-func (service *SegmentService) TrackLargeUnpaidInvoice(invID string, userID uuid.UUID, email string, hubspotObjectID *string) {
+func (service *ReportingService) TrackLargeUnpaidInvoice(invID string, userID uuid.UUID, email string, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -852,7 +852,7 @@ func (service *SegmentService) TrackLargeUnpaidInvoice(invID string, userID uuid
 }
 
 // TrackViolationFrozenUnpaidInvoice sends an event to Segment indicating that a violation frozen user has not paid an invoice.
-func (service *SegmentService) TrackViolationFrozenUnpaidInvoice(invID string, userID uuid.UUID, email string, hubspotObjectID *string) {
+func (service *ReportingService) TrackViolationFrozenUnpaidInvoice(invID string, userID uuid.UUID, email string, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -870,7 +870,7 @@ func (service *SegmentService) TrackViolationFrozenUnpaidInvoice(invID string, u
 
 // TrackLegalHoldUnpaidInvoice sends an event to Segment indicating that a user has not paid an invoice
 // but is in legal hold.
-func (service *SegmentService) TrackLegalHoldUnpaidInvoice(invID string, userID uuid.UUID, email string, hubspotObjectID *string) {
+func (service *ReportingService) TrackLegalHoldUnpaidInvoice(invID string, userID uuid.UUID, email string, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -887,7 +887,7 @@ func (service *SegmentService) TrackLegalHoldUnpaidInvoice(invID string, userID 
 }
 
 // TrackStorjscanUnpaidInvoice sends an event to Segment indicating that a user has not paid an invoice, but has storjscan transaction history.
-func (service *SegmentService) TrackStorjscanUnpaidInvoice(invID string, userID uuid.UUID, email string, hubspotObjectID *string) {
+func (service *ReportingService) TrackStorjscanUnpaidInvoice(invID string, userID uuid.UUID, email string, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -904,7 +904,7 @@ func (service *SegmentService) TrackStorjscanUnpaidInvoice(invID string, userID 
 }
 
 // TrackAccountVerified sends an "Account Verified" event to Segment.
-func (service *SegmentService) TrackAccountVerified(userID uuid.UUID, email string, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackAccountVerified(userID uuid.UUID, email string, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -929,7 +929,7 @@ func (service *SegmentService) TrackAccountVerified(userID uuid.UUID, email stri
 
 // TrackEvent sends an arbitrary event associated with user ID to Segment.
 // It is used for tracking occurrences of client-side events.
-func (service *SegmentService) TrackEvent(eventName string, userID uuid.UUID, email string, customProps map[string]string, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackEvent(eventName string, userID uuid.UUID, email string, customProps map[string]string, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -963,7 +963,7 @@ func (service *SegmentService) TrackEvent(eventName string, userID uuid.UUID, em
 
 // TrackErrorEvent sends an arbitrary error event associated with user ID to Segment.
 // It is used for tracking occurrences of client-side errors.
-func (service *SegmentService) TrackErrorEvent(userID uuid.UUID, email, source, requestID string, statusCode int, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackErrorEvent(userID uuid.UUID, email, source, requestID string, statusCode int, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -988,7 +988,7 @@ func (service *SegmentService) TrackErrorEvent(userID uuid.UUID, email, source, 
 
 // TrackLinkEvent sends an arbitrary event and link associated with user ID to Segment.
 // It is used for tracking occurrences of client-side events.
-func (service *SegmentService) TrackLinkEvent(eventName string, userID uuid.UUID, email, link string, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackLinkEvent(eventName string, userID uuid.UUID, email, link string, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -1011,7 +1011,7 @@ func (service *SegmentService) TrackLinkEvent(eventName string, userID uuid.UUID
 }
 
 // TrackCreditCardAdded sends an "Credit Card Added" event to Segment.
-func (service *SegmentService) TrackCreditCardAdded(userID uuid.UUID, email string, hubspotObjectID *string) {
+func (service *ReportingService) TrackCreditCardAdded(userID uuid.UUID, email string, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -1028,7 +1028,7 @@ func (service *SegmentService) TrackCreditCardAdded(userID uuid.UUID, email stri
 
 // PageVisitEvent sends a page visit event associated with user ID to Segment.
 // It is used for tracking occurrences of client-side events.
-func (service *SegmentService) PageVisitEvent(pageName string, userID uuid.UUID, email string, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) PageVisitEvent(pageName string, userID uuid.UUID, email string, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -1046,7 +1046,7 @@ func (service *SegmentService) PageVisitEvent(pageName string, userID uuid.UUID,
 }
 
 // TrackProjectLimitError sends an "Project Limit Error" event to Segment.
-func (service *SegmentService) TrackProjectLimitError(userID uuid.UUID, email string, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackProjectLimitError(userID uuid.UUID, email string, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -1062,7 +1062,7 @@ func (service *SegmentService) TrackProjectLimitError(userID uuid.UUID, email st
 }
 
 // TrackProjectMemberAddition sends an "Project Member Added" event to Segment.
-func (service *SegmentService) TrackProjectMemberAddition(userID uuid.UUID, email string, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackProjectMemberAddition(userID uuid.UUID, email string, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -1078,7 +1078,7 @@ func (service *SegmentService) TrackProjectMemberAddition(userID uuid.UUID, emai
 }
 
 // TrackProjectMemberDeletion sends an "Project Member Deleted" event to Segment.
-func (service *SegmentService) TrackProjectMemberDeletion(userID uuid.UUID, email string, hubspotObjectID, tenantID *string) {
+func (service *ReportingService) TrackProjectMemberDeletion(userID uuid.UUID, email string, hubspotObjectID, tenantID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -1094,7 +1094,7 @@ func (service *SegmentService) TrackProjectMemberDeletion(userID uuid.UUID, emai
 }
 
 // TrackExpiredCreditNeedsRemoval sends an "Expired Credit Needs Removal" event to Segment.
-func (service *SegmentService) TrackExpiredCreditNeedsRemoval(userID uuid.UUID, customerID, packagePlan string, hubspotObjectID *string) {
+func (service *ReportingService) TrackExpiredCreditNeedsRemoval(userID uuid.UUID, customerID, packagePlan string, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -1111,7 +1111,7 @@ func (service *SegmentService) TrackExpiredCreditNeedsRemoval(userID uuid.UUID, 
 }
 
 // TrackExpiredCreditRemoved sends an "Expired Credit Removed" event to Segment.
-func (service *SegmentService) TrackExpiredCreditRemoved(userID uuid.UUID, customerID, packagePlan string, hubspotObjectID *string) {
+func (service *ReportingService) TrackExpiredCreditRemoved(userID uuid.UUID, customerID, packagePlan string, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -1128,7 +1128,7 @@ func (service *SegmentService) TrackExpiredCreditRemoved(userID uuid.UUID, custo
 }
 
 // TrackInviteLinkSignup sends an "Invite Link Signup" event to Segment.
-func (service *SegmentService) TrackInviteLinkSignup(inviter, invitee string) {
+func (service *ReportingService) TrackInviteLinkSignup(inviter, invitee string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -1144,7 +1144,7 @@ func (service *SegmentService) TrackInviteLinkSignup(inviter, invitee string) {
 }
 
 // TrackInviteLinkClicked sends an "Invite Link Clicked" event to Segment.
-func (service *SegmentService) TrackInviteLinkClicked(inviter, invitee string) {
+func (service *ReportingService) TrackInviteLinkClicked(inviter, invitee string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -1160,7 +1160,7 @@ func (service *SegmentService) TrackInviteLinkClicked(inviter, invitee string) {
 }
 
 // TrackUserUpgraded sends a "User Upgraded" event to Segment.
-func (service *SegmentService) TrackUserUpgraded(userID uuid.UUID, email string, expiration *time.Time, hubspotObjectID *string) {
+func (service *ReportingService) TrackUserUpgraded(userID uuid.UUID, email string, expiration *time.Time, hubspotObjectID *string) {
 	if !service.config.Enabled {
 		return
 	}
@@ -1192,7 +1192,7 @@ func (service *SegmentService) TrackUserUpgraded(userID uuid.UUID, email string,
 }
 
 // TrackAdminAuditEvent sends an admin audit event to Segment with structured properties.
-func (service *SegmentService) TrackAdminAuditEvent(userID uuid.UUID, customProps map[string]interface{}) {
+func (service *ReportingService) TrackAdminAuditEvent(userID uuid.UUID, customProps map[string]interface{}) {
 	if !service.config.Enabled {
 		return
 	}
@@ -1210,7 +1210,7 @@ func (service *SegmentService) TrackAdminAuditEvent(userID uuid.UUID, customProp
 }
 
 // ValidateAccountObjectCreatedRequestSignature validates the signature of the AccountObjectCreatedRequest.
-func (service *SegmentService) ValidateAccountObjectCreatedRequestSignature(
+func (service *ReportingService) ValidateAccountObjectCreatedRequestSignature(
 	request AccountObjectCreatedRequest,
 	signatureHeader, timestampHeader string,
 ) error {
@@ -1253,7 +1253,7 @@ func (service *SegmentService) ValidateAccountObjectCreatedRequestSignature(
 }
 
 // GetAccessToken retrieves the access token from HubSpot.
-func (service *SegmentService) GetAccessToken(ctx context.Context) (token string, err error) {
+func (service *ReportingService) GetAccessToken(ctx context.Context) (token string, err error) {
 	if !service.config.Enabled {
 		return "", Error.New("analytics service is not enabled")
 	}
@@ -1262,11 +1262,11 @@ func (service *SegmentService) GetAccessToken(ctx context.Context) (token string
 }
 
 // TestSetSatelliteExternalAddress sets the satellite external address for testing purposes.
-func (service *SegmentService) TestSetSatelliteExternalAddress(address string) {
+func (service *ReportingService) TestSetSatelliteExternalAddress(address string) {
 	service.satelliteExternalAddress = address
 }
 
-func (service *SegmentService) newPropertiesWithOpts(hubspotObjectID, tenantID *string) segment.Properties {
+func (service *ReportingService) newPropertiesWithOpts(hubspotObjectID, tenantID *string) segment.Properties {
 	props := segment.NewProperties()
 	props.Set("satellite", service.satelliteName)
 	if hubspotObjectID != nil {

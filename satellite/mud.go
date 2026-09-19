@@ -252,8 +252,8 @@ func Module(ball *mud.Ball) {
 	mailservice.Module(ball)
 	analytics.Module(ball)
 	// TODO: we must keep it here as it uses consoleweb.Config from analytics package.
-	mud.Provide[*analytics.SegmentService](ball, func(log *zap.Logger, config analytics.Config, consoleConfig consoleweb.Config) *analytics.SegmentService {
-		return analytics.NewSegmentService(log, config, consoleConfig.SatelliteName, consoleConfig.ExternalAddress)
+	mud.Provide[*analytics.ReportingService](ball, func(log *zap.Logger, config analytics.Config, consoleConfig consoleweb.Config) *analytics.ReportingService {
+		return analytics.NewReportingService(log, config, consoleConfig.SatelliteName, consoleConfig.ExternalAddress)
 	})
 	abtesting.Module(ball)
 	hubspotmails.Module(ball)

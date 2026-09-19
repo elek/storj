@@ -13,7 +13,7 @@ func Module(ball *mud.Ball) {
 	config.RegisterConfig[Config](ball, "analytics")
 	mud.Provide[*NoopService](ball, NewNoopService)
 
-	// *SegmentService is provided by satellite.Module, as it depends on consoleweb.Config.
-	mud.RegisterInterfaceImplementation[Service, *SegmentService](ball)
+	// *ReportingService is provided by satellite.Module, as it depends on consoleweb.Config.
+	mud.RegisterInterfaceImplementation[Service, *ReportingService](ball)
 	mud.RegisterInterfaceImplementation[FreezeTracker, Service](ball)
 }

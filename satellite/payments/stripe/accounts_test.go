@@ -41,7 +41,7 @@ func TestSignupCouponCodes(t *testing.T) {
 		db := sat.DB
 		log := zaptest.NewLogger(t)
 
-		analyticsService := analytics.NewSegmentService(log, analytics.Config{}, "test-satellite", sat.Config.Console.ExternalAddress)
+		analyticsService := analytics.NewReportingService(log, analytics.Config{}, "test-satellite", sat.Config.Console.ExternalAddress)
 
 		redis, err := testredis.Mini(ctx)
 		require.NoError(t, err)

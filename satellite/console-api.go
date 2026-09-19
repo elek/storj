@@ -335,7 +335,7 @@ func NewConsoleAPI(log *zap.Logger, full *identity.FullIdentity, db DB,
 	}
 
 	{ // setup analytics service
-		peer.Analytics.Service = analytics.NewSegmentService(peer.Log.Named("analytics:service"), config.Analytics, config.Console.SatelliteName, config.Console.ExternalAddress)
+		peer.Analytics.Service = analytics.NewReportingService(peer.Log.Named("analytics:service"), config.Analytics, config.Console.SatelliteName, config.Console.ExternalAddress)
 
 		peer.Services.Add(lifecycle.Item{
 			Name:  "analytics:service",
