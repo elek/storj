@@ -39,14 +39,15 @@ const isLoading = ref<boolean>(true);
 const isForbidden = ref<boolean>(false);
 
 /**
- * The tag is now in the database, so reflect it without refetching the list.
+ * Re-reads the list rather than assuming the confirmation stuck, so that what
+ * the table shows is always what the satellite actually recorded.
  */
-function onConfirmed(nodeID: string): void {
-    const node = page.value.nodes.find(n => n.id === nodeID);
-    if (node) node.confirmed = true;
+async function onConfirmed(): Promise<void> {
+    await fetchNodes();
 }
 
-onMounted(async () => {
+async function fetchNodes(): Promise<void> {
+    isLoading.value = true;
     try {
         page.value = await api.get();
     } catch (error) {
@@ -60,5 +61,7 @@ onMounted(async () => {
     } finally {
         isLoading.value = false;
     }
-});
+}
+
+onMounted(fetchNodes);
 </script>

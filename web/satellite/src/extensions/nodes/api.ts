@@ -40,11 +40,16 @@ export class NodesHttpAPI {
     public async confirm(nodeID: string): Promise<void> {
         const response = await this.client.post(`${this.ROOT_PATH}/${nodeID}/confirm`, null);
 
-        if (!response.ok) {
-            const result = await response.json().catch(() => ({}));
+        // N.B. an unrouted /api request falls through to the console's catch-all,
+        // which answers 200 with index.html. Read the body rather than trusting
+        // the status, so a request that never reached the endpoint cannot pass
+        // for a confirmation.
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result?.confirmed) {
             throw new APIError({
                 status: response.status,
-                message: result.error || 'Cannot confirm node ownership',
+                message: result?.error || 'Cannot confirm node ownership',
                 requestID: response.headers.get('x-request-id'),
             });
         }
