@@ -298,11 +298,10 @@ func TestChoreInvitedOperatorRegisters(t *testing.T) {
 // which is the only way it is wired up.
 func TestChoreMudWiring(t *testing.T) {
 	mudplanet.Run(t, satellitetest.WithDB(
+		// no mail.template-path is configured here on purpose, so the chore is
+		// wired up with the email templates embedded into the binary.
 		mudplanet.NewComponent("satellite", satellitetest.Satellite,
 			mudplanet.WithRunning[*nodeinvites.Chore](),
-			mudplanet.WithConfig(func(cfg *mailservice.Config) {
-				cfg.TemplatePath = "../../web/satellite/static/emails"
-			}),
 		),
 	), func(t *testing.T, ctx context.Context, run mudplanet.RuntimeEnvironment) {
 		chore := mudplanet.FindFirst[*nodeinvites.Chore](t, run, "satellite", 0)

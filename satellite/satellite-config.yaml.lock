@@ -1287,7 +1287,7 @@ identity.key-path: /root/.local/share/storj/identity/satellite/identity.key
 # smtp server address
 # mail.smtp-server-address: ""
 
-# path to email templates source
+# path to email templates source, if empty the templates embedded into the binary are used
 # mail.template-path: ""
 
 # uri which is used when retrieving new access token

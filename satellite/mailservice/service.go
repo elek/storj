@@ -22,12 +22,13 @@ import (
 	"storj.io/common/context2"
 	"storj.io/storj/private/post"
 	"storj.io/storj/satellite/tenancy"
+	"storj.io/storj/web/satellite/static/emails"
 )
 
 // Config defines values needed by mailservice service.
 type Config struct {
 	SMTPServerAddress string `help:"smtp server address" default:"" testDefault:"smtp.mail.test:587"`
-	TemplatePath      string `help:"path to email templates source" default:""`
+	TemplatePath      string `help:"path to email templates source, if empty the templates embedded into the binary are used" default:""`
 	From              string `help:"sender email address" default:"" testDefault:"Labs <storj@mail.test>"`
 	AuthType          string `help:"smtp authentication type" releaseDefault:"login" devDefault:"simulate"`
 	Login             string `help:"plain/login auth user login" default:""`
@@ -106,10 +107,25 @@ type Service struct {
 	sending sync.WaitGroup
 }
 
-// New creates new service.
+// New creates new service. When templatePath is empty, the templates embedded
+// into the binary are used.
 func New(log *zap.Logger, sender Sender, templatePath string, cfg TenantConfig, defaultBranding WhiteLabelConfig, defaultExtraHeaders map[string]string) (*Service, error) {
 	var err error
 	service := &Service{log: log, Sender: sender, tenantConfig: cfg, defaultBranding: defaultBranding, defaultExtraHeaders: defaultExtraHeaders}
+
+	if templatePath == "" {
+		service.html, err = htmltemplate.ParseFS(emails.Templates, "*.html")
+		if err != nil {
+			return nil, errs.Wrap(err)
+		}
+
+		service.text, err = texttemplate.ParseFS(emails.Templates, "*.txt")
+		if err != nil {
+			return nil, errs.Wrap(err)
+		}
+
+		return service, nil
+	}
 
 	service.html, err = htmltemplate.ParseGlob(filepath.Join(templatePath, "*.html"))
 	if err != nil {
