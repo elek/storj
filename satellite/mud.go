@@ -93,6 +93,7 @@ import (
 	"storj.io/storj/satellite/payments/storjscan"
 	"storj.io/storj/satellite/payments/stripe"
 	"storj.io/storj/satellite/piecelist"
+	"storj.io/storj/satellite/planaccess"
 	"storj.io/storj/satellite/projectlimitevents"
 	"storj.io/storj/satellite/repair/checker"
 	"storj.io/storj/satellite/repair/queue"
@@ -496,6 +497,7 @@ func Module(ball *mud.Ball) {
 	mud.Provide[*admin.Server](ball, CreateAdminServer)
 	projectlimitevents.Module(ball)
 	nodeinvites.Module(ball)
+	planaccess.Module(ball)
 	statsexport.Module(ball)
 }
 
