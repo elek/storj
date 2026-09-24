@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/storj/satellite"
+	"storj.io/storj/satellite/satellitedb/dbaccess"
 	"storj.io/storj/shared/dbutil"
 	"storj.io/storj/shared/lrucache"
 	"storj.io/storj/shared/modular/config"
@@ -20,8 +21,14 @@ import (
 // Module is a mud module.
 func Module(ball *mud.Ball) {
 	mud.Provide[satellite.DB](ball, OpenDBWithMigration)
+	mud.Provide[dbaccess.Access](ball, func(wrapped satellite.DB) (dbaccess.Access, error) {
+		access, ok := wrapped.(dbaccess.Access)
+		if !ok {
+			return nil, errs.New("database does not implement dbaccess.Access")
+		}
+		return access, nil
+	})
 	config.RegisterConfig[DatabaseOptions](ball, "database-options")
-
 }
 
 // DatabaseOptions are the configurations for satellitedb.

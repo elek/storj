@@ -46,6 +46,7 @@ import (
 	"storj.io/storj/satellite/console/consoleauth/sso"
 	"storj.io/storj/satellite/console/consoleext"
 	consoleextnodes "storj.io/storj/satellite/console/consoleext/nodes"
+	consoleextnotifications "storj.io/storj/satellite/console/consoleext/notifications"
 	"storj.io/storj/satellite/console/consoleservice"
 	"storj.io/storj/satellite/console/consoleweb"
 	"storj.io/storj/satellite/console/dbcleanup"
@@ -105,6 +106,7 @@ import (
 	"storj.io/storj/satellite/snopayouts"
 	"storj.io/storj/satellite/statsexport"
 	"storj.io/storj/satellite/taskqueue"
+	"storj.io/storj/satellite/telegram"
 	"storj.io/storj/satellite/webhook"
 	sndebug "storj.io/storj/shared/debug"
 	"storj.io/storj/shared/modular/config"
@@ -147,6 +149,7 @@ func Module(ball *mud.Ball) {
 	consoleweb.Module(ball)
 	consoleext.Module(ball)
 	consoleextnodes.Module(ball)
+	consoleextnotifications.Module(ball)
 	{
 		mud.Provide[extensions.RevocationDB](ball, revocation.OpenDBFromCfg)
 		mud.Provide[rpc.Dialer](ball, rpc.NewDefaultPooledDialer)
@@ -455,6 +458,7 @@ func Module(ball *mud.Ball) {
 	straynodes.Module(ball)
 
 	nodeevents.Module(ball)
+	telegram.Module(ball)
 	// TODO: remove circular dependencies (overlay.Config vs nodeevents.Config)
 	mud.Provide[*nodeevents.Chore](ball, func(log *zap.Logger, db nodeevents.DB, notifier nodeevents.Notifier, config nodeevents.Config, cw consoleweb.Config) *nodeevents.Chore {
 		return nodeevents.NewChore(log, db, cw.SatelliteName, notifier, config)

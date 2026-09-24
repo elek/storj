@@ -14,6 +14,10 @@ func Module(ball *mud.Ball) {
 	mud.Provide[*MockNotifier](ball, NewMockNotifier)
 	mud.Provide[*CustomerioNotifier](ball, NewCustomerioNotifier)
 	mud.RegisterInterfaceImplementation[Notifier, *CustomerioNotifier](ball)
+	// Notifiers which should be used together join the []Notifier multibinding,
+	// which MultiNotifier fans out to.
+	mud.Implementation[[]Notifier, *CustomerioNotifier](ball)
+	mud.Provide[*MultiNotifier](ball, NewMultiNotifier)
 	mud.View[*Config, CustomerioConfig](ball, func(cfg *Config) CustomerioConfig {
 		return cfg.Customerio
 	})

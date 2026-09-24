@@ -13,6 +13,7 @@ import { type RouteRecordRaw } from 'vue-router';
 
 import { type ExtensionNavItem } from '@/extensions/types';
 import { nodesNavItems, nodesRoutes } from '@/extensions/nodes';
+import { notificationsNavItems, notificationsRoutes } from '@/extensions/notifications';
 
 export * from '@/extensions/types';
 
@@ -22,6 +23,7 @@ export * from '@/extensions/types';
  */
 export const extensionRoutes: RouteRecordRaw[] = [
     ...nodesRoutes,
+    ...notificationsRoutes,
 ];
 
 /**
@@ -29,4 +31,5 @@ export const extensionRoutes: RouteRecordRaw[] = [
  */
 export const extensionNavItems: ExtensionNavItem[] = [
     ...nodesNavItems,
+    ...notificationsNavItems,
 ].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));

@@ -34,6 +34,7 @@ import (
 	"storj.io/storj/satellite/reputation"
 	"storj.io/storj/satellite/revocation"
 	"storj.io/storj/satellite/satellitedb/consoledb"
+	"storj.io/storj/satellite/satellitedb/dbaccess"
 	"storj.io/storj/satellite/satellitedb/dbx"
 	"storj.io/storj/satellite/snopayouts"
 	"storj.io/storj/satellite/statsexport"
@@ -69,6 +70,30 @@ type satelliteDB struct {
 
 	revocationDBOnce sync.Once
 	revocationDB     *revocationDB
+}
+
+var _ dbaccess.Access = (*satelliteDB)(nil)
+
+// GetDB implements dbaccess.Access.
+func (db *satelliteDB) GetDB() tagsql.DB {
+	return db.DB
+}
+
+// GetMigrationDB implements dbaccess.Access.
+func (db *satelliteDB) GetMigrationDB() tagsql.DB {
+	return db.migrationDB
+}
+
+var _ dbaccess.Access = (*satelliteDBCollection)(nil)
+
+// GetDB implements dbaccess.Access, with the primary database.
+func (dbc *satelliteDBCollection) GetDB() tagsql.DB {
+	return dbc.dbs[""].GetDB()
+}
+
+// GetMigrationDB implements dbaccess.Access, with the primary database.
+func (dbc *satelliteDBCollection) GetMigrationDB() tagsql.DB {
+	return dbc.dbs[""].GetMigrationDB()
 }
 
 // Options includes options for how a satelliteDB runs.

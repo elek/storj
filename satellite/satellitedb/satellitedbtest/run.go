@@ -24,6 +24,7 @@ import (
 	"storj.io/storj/satellite"
 	"storj.io/storj/satellite/metabase"
 	"storj.io/storj/satellite/satellitedb"
+	"storj.io/storj/satellite/satellitedb/dbaccess"
 	"storj.io/storj/shared/dbutil"
 	"storj.io/storj/shared/dbutil/dbtest"
 	"storj.io/storj/shared/dbutil/pgutil"
@@ -144,6 +145,18 @@ type tempMasterDB struct {
 // Close closes a tempMasterDB and cleans it up afterward.
 func (db *tempMasterDB) Close() error {
 	return errs.Combine(db.DB.Close(), db.tempDB.Close())
+}
+
+var _ dbaccess.Access = (*tempMasterDB)(nil)
+
+// GetDB implements dbaccess.Access.
+func (db *tempMasterDB) GetDB() tagsql.DB {
+	return db.DB.(dbaccess.Access).GetDB()
+}
+
+// GetMigrationDB implements dbaccess.Access.
+func (db *tempMasterDB) GetMigrationDB() tagsql.DB {
+	return db.DB.(dbaccess.Access).GetMigrationDB()
 }
 
 // CreateMasterDB creates a new satellite database for testing.
