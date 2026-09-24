@@ -44,7 +44,7 @@ func Module(ball *mud.Ball) {
 		ec.ownedPool = dialer.Pool
 		return ec
 	})
-	mud.Provide[*SegmentRepairer](ball, func(log *zap.Logger, metabase *metabase.DB, orders *orders.Service, overlay *overlay.Service, reporter audit.Reporter, ecRepairer *ECRepairer, placements nodeselection.PlacementDefinitions, config Config, checkerConfig checker.Config) (*SegmentRepairer, error) {
+	mud.Provide[*SegmentRepairer](ball, func(log *zap.Logger, metabase *metabase.DB, orders *orders.Service, overlay *overlay.Service, reporter audit.Reporter, ecRepairer *ECRepairer, placements nodeselection.PlacementProvider, config Config, checkerConfig checker.Config) (*SegmentRepairer, error) {
 		return NewSegmentRepairer(log, metabase, orders, overlay, reporter, ecRepairer, placements, checkerConfig.RepairThresholdOverrides, checkerConfig.RepairTargetOverrides, config)
 	})
 	config.RegisterConfig[Config](ball, "repairer")

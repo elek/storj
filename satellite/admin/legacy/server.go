@@ -89,7 +89,7 @@ type Server struct {
 	freezeAccounts *console.AccountFreezeService
 	entitlements   *entitlements.Service
 
-	placement nodeselection.PlacementDefinitions
+	placement nodeselection.PlacementProvider
 
 	nowFn func() time.Time
 
@@ -110,7 +110,7 @@ func NewServer(
 	analyticsService analytics.Service,
 	accounts payments.Accounts,
 	entitlements *entitlements.Service,
-	placement nodeselection.PlacementDefinitions,
+	placement nodeselection.PlacementProvider,
 	console consoleweb.Config,
 	entitlementsCfg entitlements.Config,
 	config Config,

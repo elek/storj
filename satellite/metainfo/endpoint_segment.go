@@ -87,7 +87,7 @@ func (endpoint *Endpoint) beginSegment(ctx context.Context, req *pb.SegmentBegin
 		}
 	}
 
-	placement := endpoint.placement[storj.PlacementConstraint(streamID.Placement)]
+	placement, _ := endpoint.placement.Get(storj.PlacementConstraint(streamID.Placement))
 	config := endpoint.config
 	rsParams := config.RS.Override(placement.EC)
 	defaultRedundancy := storj.RedundancyScheme{
@@ -301,7 +301,7 @@ func (endpoint *Endpoint) RetryBeginSegmentPieces(ctx context.Context, req *pb.R
 		return nil, endpoint.ConvertKnownErrWithMessage(err, "internal error")
 	}
 
-	placement := endpoint.placement[storj.PlacementConstraint(segmentID.StreamId.Placement)]
+	placement, _ := endpoint.placement.Get(storj.PlacementConstraint(segmentID.StreamId.Placement))
 	if placement.CohortNames != nil {
 		for i, piecenum := range req.RetryPieceNumbers {
 			addressedLimits[piecenum].Tags = make(map[string][]byte, len(placement.CohortNames))

@@ -123,7 +123,7 @@ type SegmentRepairer struct {
 	nowFn                            func() time.Time
 	OnTestingCheckSegmentAlteredHook func()
 	OnTestingPiecesReportHook        func(pieces FetchResultReport)
-	placements                       nodeselection.PlacementDefinitions
+	placements                       nodeselection.PlacementProvider
 	// onlineWindow to consider if storage nodes are online according to their last successful contact.
 	onlineWindow time.Duration
 }
@@ -140,7 +140,7 @@ func NewSegmentRepairer(
 	overlaysvc *overlay.Service,
 	reporter audit.Reporter,
 	ecRepairer *ECRepairer,
-	placements nodeselection.PlacementDefinitions,
+	placements nodeselection.PlacementProvider,
 	repairThresholdOverrides checker.RepairThresholdOverrides,
 	repairTargetOverrides checker.RepairTargetOverrides,
 	config Config,
@@ -281,10 +281,10 @@ func (repairer *SegmentRepairer) Repair(ctx context.Context, queueSegment queue.
 		return false, overlayQueryError.New("GetParticipatingNodes returned an invalid result")
 	}
 	pieces := segment.Pieces
-	placementDef := repairer.placements[segment.Placement]
+	placementDef, _ := repairer.placements.Get(segment.Placement)
 	piecesCheck := repair.ClassifySegmentPieces(pieces, selectedNodes, repairer.excludedCountryCodes, repairer.doPlacementCheck, repairer.doDeclumping, placementDef)
 
-	newRedundancy := checker.AdjustRedundancy(segment.Redundancy, repairer.repairThresholdOverrides, repairer.repairTargetOverrides, repairer.placements[segment.Placement])
+	newRedundancy := checker.AdjustRedundancy(segment.Redundancy, repairer.repairThresholdOverrides, repairer.repairTargetOverrides, placementDef)
 
 	// irreparable segment
 	if piecesCheck.Retrievable.Count() < int(newRedundancy.RequiredShares) {

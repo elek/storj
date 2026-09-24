@@ -65,7 +65,7 @@ type Service struct {
 	payments      payments.Accounts
 	mailService   *mailservice.Service
 
-	placement nodeselection.PlacementDefinitions
+	placement nodeselection.PlacementProvider
 	products  map[int32]payments.ProductUsagePriceModel
 	defaults  Defaults
 
@@ -97,7 +97,7 @@ func NewService(
 	payments payments.Accounts,
 	restKeys restapikeys.Service,
 	mailService *mailservice.Service,
-	placement nodeselection.PlacementDefinitions,
+	placement nodeselection.PlacementProvider,
 	products map[int32]payments.ProductUsagePriceModel,
 	defaults Defaults,
 	adminConfig Config,

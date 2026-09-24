@@ -560,3 +560,34 @@ func TestStringSerialization(t *testing.T) {
 
 	}
 }
+
+func TestPlacementProvider(t *testing.T) {
+	var provider PlacementProvider = NewPlacementDefinitions(
+		Placement{ID: 1, Name: "one", NodeFilter: AnyFilter{}, DownloadSelector: DefaultDownloadSelector},
+		Placement{ID: 2, Name: "two", NodeFilter: ExcludeAllFilter{}, DownloadSelector: DefaultDownloadSelector},
+	)
+
+	p, found := provider.Get(2)
+	require.True(t, found)
+	require.Equal(t, "two", p.Name)
+
+	_, found = provider.Get(3)
+	require.False(t, found)
+
+	require.Len(t, provider.All(), 2)
+
+	id, found := FindPlacementByName(provider, "two")
+	require.True(t, found)
+	require.Equal(t, storj.PlacementConstraint(2), id)
+
+	_, found = FindPlacementByName(provider, "three")
+	require.False(t, found)
+
+	rules := PlacementRulesFromProvider(provider)
+	filter, _ := rules(1)
+	require.True(t, filter.Match(&SelectedNode{}))
+
+	// unknown placement excludes everything.
+	filter, _ = rules(3)
+	require.False(t, filter.Match(&SelectedNode{}))
+}

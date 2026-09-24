@@ -32,13 +32,14 @@ type DrainConfig struct {
 // It finds segments with pieces on nodes that should be drained and generates
 // jobs to move those pieces to new nodes selected via the configured placement selector.
 type Drain struct {
-	log         *zap.Logger
-	config      DrainConfig
-	uploadCache *overlay.UploadSelectionCache
-	placements  nodeselection.PlacementDefinitions
-	client      *taskqueue.Client
+	log               *zap.Logger
+	config            DrainConfig
+	uploadCache       *overlay.UploadSelectionCache
+	placementProvider nodeselection.PlacementProvider
+	client            *taskqueue.Client
 
 	// state populated during Start, read-only during Fork/Process
+	placements nodeselection.PlacementDefinitions
 	drainNodes map[storj.NodeID]bool
 	// nodeMap maps node IDs to their full SelectedNode data (from upload selection cache).
 	nodeMap map[storj.NodeID]*nodeselection.SelectedNode
@@ -52,16 +53,16 @@ type Drain struct {
 func NewDrain(
 	log *zap.Logger,
 	uploadCache *overlay.UploadSelectionCache,
-	placements nodeselection.PlacementDefinitions,
+	placements nodeselection.PlacementProvider,
 	client *taskqueue.Client,
 	config DrainConfig,
 ) *Drain {
 	return &Drain{
-		log:         log,
-		config:      config,
-		uploadCache: uploadCache,
-		placements:  placements,
-		client:      client,
+		log:               log,
+		config:            config,
+		uploadCache:       uploadCache,
+		placementProvider: placements,
+		client:            client,
 	}
 }
 
@@ -70,6 +71,8 @@ var _ rangedloop.Observer = (*Drain)(nil)
 // Start is called at the beginning of each segment loop.
 func (d *Drain) Start(ctx context.Context, startTime time.Time) (err error) {
 	defer mon.Task()(&ctx)(&err)
+
+	d.placements = d.placementProvider.All()
 
 	d.drainNodes = make(map[storj.NodeID]bool)
 

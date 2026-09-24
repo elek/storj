@@ -108,7 +108,7 @@ func NewServer(
 	accounts payments.Accounts,
 	service *Service,
 	entitlements *entitlements.Service,
-	placement nodeselection.PlacementDefinitions,
+	placement nodeselection.PlacementProvider,
 	console consoleweb.Config,
 	entitlementsCfg entitlements.Config,
 	config Config,

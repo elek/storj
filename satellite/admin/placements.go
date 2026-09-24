@@ -21,8 +21,9 @@ func (s *Service) GetPlacements(ctx context.Context) ([]PlacementInfo, api.HTTPE
 	var err error
 	defer mon.Task()(&ctx)(&err)
 
-	infos := make([]PlacementInfo, 0, len(s.placement))
-	for id, placement := range s.placement {
+	placements := s.placement.All()
+	infos := make([]PlacementInfo, 0, len(placements))
+	for id, placement := range placements {
 		infos = append(infos, PlacementInfo{
 			ID:       id,
 			Location: placement.Name,

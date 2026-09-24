@@ -47,7 +47,7 @@ type Worker struct {
 	orders      *orders.Service
 	uploadCache *overlay.UploadSelectionCache
 	dialer      rpc.Dialer
-	placements  nodeselection.PlacementDefinitions
+	placements  nodeselection.PlacementProvider
 
 	runner  *taskqueue.BatchRunner[Job]
 	nodeMap map[storj.NodeID]*nodeselection.SelectedNode
@@ -63,7 +63,7 @@ func NewWorker(
 	orders *orders.Service,
 	uploadCache *overlay.UploadSelectionCache,
 	dialer rpc.Dialer,
-	placements nodeselection.PlacementDefinitions,
+	placements nodeselection.PlacementProvider,
 ) *Worker {
 	w := &Worker{
 		log:         log,
@@ -336,7 +336,7 @@ func (w *Worker) transferPiece(ctx context.Context, job Job, segment metabase.Se
 		}
 	}
 
-	placement, ok := w.placements[segment.Placement]
+	placement, ok := w.placements.Get(segment.Placement)
 	if !ok {
 		return nil, 0, Error.New("unknown placement %d", segment.Placement)
 	}

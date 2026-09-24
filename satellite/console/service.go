@@ -249,8 +249,7 @@ type Service struct {
 	projectUsage               *accounting.Service
 	buckets                    buckets.DB
 	attributions               attribution.DB
-	placements                 nodeselection.PlacementDefinitions
-	placementNameLookup        map[string]storj.PlacementConstraint
+	placements                 nodeselection.PlacementProvider
 	placementProductMap        map[int]int32
 	productConfigs             map[int32]payments.ProductUsagePriceModel
 	accounts                   payments.Accounts
@@ -367,7 +366,7 @@ func NewService(log *zap.Logger, store DB, restKeys restapikeys.DB, oauthRestKey
 	projectUsage *accounting.Service, buckets buckets.DB, attributions attribution.DB, accounts payments.Accounts, depositWallets payments.DepositWallets,
 	billingDb billing.TransactionsDB, analytics analytics.Service, tokens *consoleauth.Service, mailService *mailservice.Service, hubspotMailService *hubspotmails.Service,
 	accountFreezeService *AccountFreezeService, emission *emission.Service, kmsService *kms.Service, ssoService *sso.Service, satelliteAddress string,
-	satelliteNodeURL string, satelliteName string, singleWhiteLabel SingleWhiteLabelConfig, maxProjectBuckets int, ssoEnabled bool, placements nodeselection.PlacementDefinitions,
+	satelliteNodeURL string, satelliteName string, singleWhiteLabel SingleWhiteLabelConfig, maxProjectBuckets int, ssoEnabled bool, placements nodeselection.PlacementProvider,
 	valdiService *valdi.Service, webhookService *webhook.Service, minimumChargeAmount int64,
 	minimumChargeDate *time.Time, packagePlans map[string]payments.PackagePlan, entitlementsConfig entitlements.Config,
 	entitlementsService *entitlements.Service, placementProductMap map[int]int32, productConfigs map[int32]payments.ProductUsagePriceModel,
@@ -440,11 +439,6 @@ func NewService(log *zap.Logger, store DB, restKeys restapikeys.DB, oauthRestKey
 		}
 	}
 
-	placementNameLookup := make(map[string]storj.PlacementConstraint, len(placements))
-	for _, placement := range placements {
-		placementNameLookup[placement.Name] = placement.ID
-	}
-
 	auditableAPIKeyProjects := make(map[string]struct{}, len(config.AuditableAPIKeyProjects))
 	for _, projectID := range config.AuditableAPIKeyProjects {
 		auditableAPIKeyProjects[projectID] = struct{}{}
@@ -489,7 +483,6 @@ func NewService(log *zap.Logger, store DB, restKeys restapikeys.DB, oauthRestKey
 		buckets:                          buckets,
 		attributions:                     attributions,
 		placements:                       placements,
-		placementNameLookup:              placementNameLookup,
 		placementProductMap:              placementProductMap,
 		productConfigs:                   productConfigs,
 		accounts:                         accounts,
@@ -6141,7 +6134,7 @@ func (s *Service) getLocationName(ctx context.Context, projectPublicID uuid.UUID
 	}
 
 	// Fall back to placement name
-	placement, ok := s.placements[placementID]
+	placement, ok := s.placements.Get(placementID)
 	if !ok {
 		return fmt.Sprintf("unknown(%d)", placementID)
 	}
@@ -6336,7 +6329,7 @@ func (s *Service) getPlacementDetails(ctx context.Context, project *Project, own
 	for _, placement := range placements {
 		if detail, ok := selfServeDetails.Get(placement); ok {
 			details = append(details, detail)
-		} else if p, ok := s.placements[placement]; ok {
+		} else if p, ok := s.placements.Get(placement); ok {
 			details = append(details, PlacementDetail{
 				ID:     int(placement),
 				IdName: p.Name,
@@ -7119,7 +7112,7 @@ func (s *Service) isProjectMember(ctx context.Context, userID uuid.UUID, project
 
 // GetPlacementByName returns the placement constraint by name.
 func (s *Service) GetPlacementByName(name string) (storj.PlacementConstraint, error) {
-	if placement, ok := s.placementNameLookup[name]; ok {
+	if placement, ok := nodeselection.FindPlacementByName(s.placements, name); ok {
 		return placement, nil
 	}
 	return storj.DefaultPlacement, ErrPlacementNotFound.New("")

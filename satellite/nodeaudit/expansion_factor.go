@@ -61,10 +61,13 @@ type ExpansionFactorConfig struct {
 // - Total piece size: actual storage (all pieces)
 // - Healthy size: storage used by healthy pieces only
 type ExpansionFactor struct {
-	log        *zap.Logger
-	config     ExpansionFactorConfig
-	overlay    *overlay.Service
-	placements nodeselection.PlacementDefinitions
+	log     *zap.Logger
+	config  ExpansionFactorConfig
+	overlay *overlay.Service
+
+	// placements is a snapshot of placementProvider, refreshed on each Start.
+	placementProvider nodeselection.PlacementProvider
+	placements        nodeselection.PlacementDefinitions
 
 	excludedCountryCodes map[location.CountryCode]struct{}
 
@@ -77,7 +80,7 @@ type ExpansionFactor struct {
 }
 
 // NewExpansionFactor creates a new ExpansionFactor observer.
-func NewExpansionFactor(log *zap.Logger, overlay *overlay.Service, placements nodeselection.PlacementDefinitions, config ExpansionFactorConfig) *ExpansionFactor {
+func NewExpansionFactor(log *zap.Logger, overlay *overlay.Service, placements nodeselection.PlacementProvider, config ExpansionFactorConfig) *ExpansionFactor {
 	excludedCountryCodes := make(map[location.CountryCode]struct{})
 	for _, countryCode := range config.ExcludedCountryCodes {
 		if cc := location.ToCountryCode(countryCode); cc != location.None {
@@ -89,7 +92,8 @@ func NewExpansionFactor(log *zap.Logger, overlay *overlay.Service, placements no
 		log:                  log,
 		config:               config,
 		overlay:              overlay,
-		placements:           placements,
+		placementProvider:    placements,
+		placements:           placements.All(),
 		excludedCountryCodes: excludedCountryCodes,
 	}
 	o.warnClassificationGaps()
@@ -122,6 +126,7 @@ func (o *ExpansionFactor) Start(ctx context.Context, startTime time.Time) (err e
 	defer o.mu.Unlock()
 
 	o.startTime = startTime
+	o.placements = o.placementProvider.All()
 	o.placementStats = make(map[storj.PlacementConstraint]*PlacementExpansionStats)
 
 	// Pre-load all participating nodes to avoid querying the database for each batch.

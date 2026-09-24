@@ -49,7 +49,7 @@ func (s *Service) GetProducts(ctx context.Context) ([]ProductInfo, api.HTTPError
 	var err error
 	defer mon.Task()(&ctx)(&err)
 
-	infos := make([]ProductInfo, 0, len(s.placement))
+	infos := make([]ProductInfo, 0, len(s.products))
 	for _, product := range s.products {
 		infos = append(infos, getProductInfo(product))
 	}

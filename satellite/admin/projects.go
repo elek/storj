@@ -764,7 +764,7 @@ func (s *Service) validateUpdateProjectRequest(ctx context.Context, authInfo *Au
 		if !hasPerm(PermProjectSetDataPlacement) {
 			return apiError(http.StatusForbidden, errs.New("not authorized to change project default placement"))
 		}
-		if _, ok := s.placement[*request.DefaultPlacement]; !ok {
+		if _, ok := s.placement.Get(*request.DefaultPlacement); !ok {
 			return apiError(http.StatusBadRequest, errs.New("invalid placement ID %d", *request.DefaultPlacement))
 		}
 	}
@@ -1062,7 +1062,7 @@ func (s *Service) UpdateProjectEntitlements(ctx context.Context, authInfo *AuthI
 		}
 
 		for _, placement := range request.NewBucketPlacements {
-			if _, exists := s.placement[placement]; !exists {
+			if _, exists := s.placement.Get(placement); !exists {
 				errGroup = append(errGroup, errs.New("invalid placement constraint in new bucket placements: %v", placement))
 			}
 		}
@@ -1073,7 +1073,7 @@ func (s *Service) UpdateProjectEntitlements(ctx context.Context, authInfo *AuthI
 			errGroup = append(errGroup, errs.New("placement:product mappings cannot be empty"))
 		}
 		for placement, productID := range request.PlacementProductMappings {
-			if _, exists := s.placement[placement]; !exists {
+			if _, exists := s.placement.Get(placement); !exists {
 				errGroup = append(errGroup, errs.New("invalid placement constraint in placement:product mapping: %v", placement))
 			}
 			if _, exists := s.products[productID]; !exists {
@@ -1162,7 +1162,7 @@ func (s *Service) toProjectEntitlements(feats entitlements.ProjectFeatures) (*Pr
 			}
 		}
 		var placement string
-		if pc, ok := s.placement[placementID]; ok {
+		if pc, ok := s.placement.Get(placementID); ok {
 			placement = fmt.Sprintf("(%d) - %s", pc.ID, pc.Name)
 		}
 		mappedProducts[placement] = productInfo.MiniInfo()
@@ -1174,7 +1174,7 @@ func (s *Service) toProjectEntitlements(feats entitlements.ProjectFeatures) (*Pr
 
 	var newBucketPlacements []string
 	for _, placement := range feats.NewBucketPlacements {
-		if pc, ok := s.placement[placement]; ok {
+		if pc, ok := s.placement.Get(placement); ok {
 			newBucketPlacements = append(newBucketPlacements, fmt.Sprintf("(%d) - %s", pc.ID, pc.Name))
 		}
 	}

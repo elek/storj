@@ -160,7 +160,7 @@ func Module(ball *mud.Ball) {
 		mud.Provide[*overlay.UploadSelectionCache](ball, overlay.NewUploadSelectionCacheFromConfig)
 		mud.Provide[*overlay.DownloadSelectionCache](ball, overlay.NewDownloadSelectionCacheFromConfig)
 		// TODO: we must keep it here as it uses consoleweb.Config from overlay package.
-		mud.Provide[*overlay.Service](ball, func(log *zap.Logger, db overlay.DB, nodeEvents nodeevents.DB, uploadCache *overlay.UploadSelectionCache, downloadCache *overlay.DownloadSelectionCache, placements nodeselection.PlacementDefinitions, consoleConfig consoleweb.Config, config overlay.Config, ncfg nodeevents.Config) (*overlay.Service, error) {
+		mud.Provide[*overlay.Service](ball, func(log *zap.Logger, db overlay.DB, nodeEvents nodeevents.DB, uploadCache *overlay.UploadSelectionCache, downloadCache *overlay.DownloadSelectionCache, placements nodeselection.PlacementProvider, consoleConfig consoleweb.Config, config overlay.Config, ncfg nodeevents.Config) (*overlay.Service, error) {
 			return overlay.NewService(log, db, nodeEvents, uploadCache, downloadCache, placements, consoleConfig.ExternalAddress, consoleConfig.SatelliteName, config, ncfg)
 		})
 		mud.Provide[*overlay.UploadNodeCache](ball, func(log *zap.Logger, db overlay.DB, config overlay.Config) (*overlay.UploadNodeCache, error) {
@@ -388,7 +388,7 @@ func Module(ball *mud.Ball) {
 	})
 
 	// TODO: due to circular dependencies, we couldn't put these to stripe.Module
-	mud.Provide[stripe.PricingConfig](ball, func(pc paymentsconfig.Config, placements nodeselection.PlacementDefinitions) (stripe.PricingConfig, error) {
+	mud.Provide[stripe.PricingConfig](ball, func(pc paymentsconfig.Config, placements nodeselection.PlacementProvider) (stripe.PricingConfig, error) {
 		minimumChargeDate, err := pc.MinimumCharge.GetEffectiveDate()
 		if err != nil {
 			return stripe.PricingConfig{}, err
@@ -398,7 +398,7 @@ func Module(ball *mud.Ball) {
 			return stripe.PricingConfig{}, err
 		}
 		placementOverrideMap := pc.PlacementPriceOverrides.ToMap()
-		err = paymentsconfig.ValidatePlacementOverrideMap(placementOverrideMap, productPrices, placements)
+		err = paymentsconfig.ValidatePlacementOverrideMap(placementOverrideMap, productPrices, placements.All())
 		if err != nil {
 			return stripe.PricingConfig{}, err
 		}
@@ -561,7 +561,7 @@ func CreateService(log *zap.Logger, store console.DB, restKeys restapikeys.DB, o
 	projectUsage *accounting.Service, buckets buckets.DB, attributions attribution.DB, accounts payments.Accounts, depositWallets payments.DepositWallets,
 	billingDb billing.TransactionsDB, analytics analytics.Service, tokens *consoleauth.Service, mailService *mailservice.Service, hubspotMailService *hubspotmails.Service,
 	accountFreezeService *console.AccountFreezeService, emission *emission.Service, kmsService *kms.Service, ssoService *sso.Service,
-	placements nodeselection.PlacementDefinitions, valdiService *valdi.Service, webhookService *webhook.Service,
+	placements nodeselection.PlacementProvider, valdiService *valdi.Service, webhookService *webhook.Service,
 	entitlementsService *entitlements.Service, entitlementsConfig entitlements.Config, nodeURL storj.NodeURL, cw consoleweb.Config, cfg console.Config, mcfg metainfo.Config, ssoCfg sso.Config, pc paymentsconfig.Config) (*console.Service, error) {
 
 	productModels, err := pc.Products.ToModels()
@@ -596,7 +596,7 @@ func CreateAdminServer(log *zap.Logger,
 	accounts payments.Accounts,
 	service *admin.Service,
 	entitlements *entitlements.Service,
-	placement nodeselection.PlacementDefinitions,
+	placement nodeselection.PlacementProvider,
 	consoleCfg consoleweb.Config,
 	entitlementsCfg entitlements.Config,
 	cfg admin.Config,

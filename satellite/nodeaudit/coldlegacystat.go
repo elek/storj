@@ -34,10 +34,13 @@ type ColdLegacyStatConfig struct {
 // ColdLegacyStat implements rangedloop.Observer.
 // It generates statistics about pieces which are at the wrong placement.
 type ColdLegacyStat struct {
-	log        *zap.Logger
-	config     ColdLegacyStatConfig
-	overlay    *overlay.Service
-	placements nodeselection.PlacementDefinitions
+	log     *zap.Logger
+	config  ColdLegacyStatConfig
+	overlay *overlay.Service
+
+	// placements is a snapshot of placementProvider, refreshed on each Start.
+	placementProvider nodeselection.PlacementProvider
+	placements        nodeselection.PlacementDefinitions
 
 	// state that gets reset on each Start
 	mu        sync.Mutex
@@ -53,12 +56,13 @@ type ColdLegacyStat struct {
 }
 
 // NewColdLegacyStat creates a new ColdLegacyStat observer.
-func NewColdLegacyStat(log *zap.Logger, overlay *overlay.Service, placements nodeselection.PlacementDefinitions, config ColdLegacyStatConfig) *ColdLegacyStat {
+func NewColdLegacyStat(log *zap.Logger, overlay *overlay.Service, placements nodeselection.PlacementProvider, config ColdLegacyStatConfig) *ColdLegacyStat {
 	return &ColdLegacyStat{
-		log:        log,
-		config:     config,
-		overlay:    overlay,
-		placements: placements,
+		log:               log,
+		config:            config,
+		overlay:           overlay,
+		placementProvider: placements,
+		placements:        placements.All(),
 	}
 }
 
@@ -67,6 +71,7 @@ func (o *ColdLegacyStat) Start(ctx context.Context, startTime time.Time) (err er
 	defer monColdLegacy.Task()(&ctx)(&err)
 
 	o.startTime = startTime
+	o.placements = o.placementProvider.All()
 	o.nodeStats = make(map[storj.NodeID]*NodeStats)
 	o.nodeCache = make(map[storj.NodeID]nodeselection.SelectedNode)
 	o.validPlacements = make(map[storj.NodeID]map[storj.PlacementConstraint]bool)

@@ -27,27 +27,29 @@ type QueueStatConfig struct {
 
 // QueueStat contains the information and variables to ensure the Software is up-to-date.
 type QueueStat struct {
-	db         queue.RepairQueue
-	log        *zap.Logger
-	mon        *monkit.Scope
-	Loop       *sync2.Cycle
-	mu         sync.Mutex
-	stats      map[string]queue.Stat
-	updated    time.Time
-	placements []storj.PlacementConstraint
+	db                queue.RepairQueue
+	log               *zap.Logger
+	mon               *monkit.Scope
+	Loop              *sync2.Cycle
+	mu                sync.Mutex
+	stats             map[string]queue.Stat
+	updated           time.Time
+	placementProvider nodeselection.PlacementProvider
+	placements        []storj.PlacementConstraint
 }
 
 var _ monkit.StatSource = &QueueStat{}
 
 // NewQueueStat creates a chore to stat repair queue statistics.
-func NewQueueStat(log *zap.Logger, registry *monkit.Registry, placement nodeselection.PlacementDefinitions, db queue.RepairQueue, cfg QueueStatConfig) *QueueStat {
+func NewQueueStat(log *zap.Logger, registry *monkit.Registry, placement nodeselection.PlacementProvider, db queue.RepairQueue, cfg QueueStatConfig) *QueueStat {
 
 	chore := &QueueStat{
-		db:         db,
-		log:        log,
-		mon:        registry.Package(),
-		Loop:       sync2.NewCycle(cfg.Interval),
-		placements: placement.SupportedPlacements(),
+		db:                db,
+		log:               log,
+		mon:               registry.Package(),
+		Loop:              sync2.NewCycle(cfg.Interval),
+		placementProvider: placement,
+		placements:        placement.All().SupportedPlacements(),
 	}
 	chore.mon.Chain(chore)
 	return chore
@@ -70,6 +72,7 @@ func (c *QueueStat) RunOnce(ctx context.Context) {
 	}
 	c.mu.Lock()
 	c.stats = map[string]queue.Stat{}
+	c.placements = c.placementProvider.All().SupportedPlacements()
 	for _, stat := range stats {
 		c.stats[key(stat.Placement, stat.MinAttemptedAt != nil)] = stat
 	}

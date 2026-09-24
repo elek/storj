@@ -19,8 +19,10 @@ func Module(ball *mud.Ball) {
 	mud.Provide[PlacementConfigEnvironment](ball, func() PlacementConfigEnvironment {
 		return NewPlacementConfigEnvironment(nil, nil)
 	})
-	mud.View[PlacementDefinitions, PlacementRules](ball, func(p PlacementDefinitions) PlacementRules {
-		return p.CreateFilters
+	// the static, configuration based placement definitions are used by default.
+	mud.View[PlacementDefinitions, PlacementProvider](ball, func(p PlacementDefinitions) PlacementProvider {
+		return p
 	})
+	mud.View[PlacementProvider, PlacementRules](ball, PlacementRulesFromProvider)
 	config.RegisterConfig[PlacementConfig](ball, "")
 }

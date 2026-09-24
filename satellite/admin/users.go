@@ -729,7 +729,7 @@ func (s *Service) validateUpdateRequest(ctx context.Context, authInfo *AuthInfo,
 			errGroup = append(errGroup, errs.New("invalid default placement %s", *request.DefaultPlacement))
 		}
 		if defaultPlacement != nil && *defaultPlacement != nil {
-			if _, ok := s.placement[**defaultPlacement]; !ok {
+			if _, ok := s.placement.Get(**defaultPlacement); !ok {
 				return apiError(http.StatusBadRequest, errs.New("invalid placement ID %d", **defaultPlacement))
 			}
 		}

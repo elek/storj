@@ -139,10 +139,8 @@ func (s *Service) GetProjectBuckets(ctx context.Context, publicID uuid.UUID, sea
 	}
 
 	getPlacementName := func(pc storj.PlacementConstraint) string {
-		for id, p := range s.placement {
-			if id == pc {
-				return p.Name
-			}
+		if p, ok := s.placement.Get(pc); ok {
+			return p.Name
 		}
 		return "unknown placement"
 	}
@@ -281,7 +279,7 @@ func (s *Service) validateUpdateBucketRequest(authInfo *AuthInfo, req UpdateBuck
 		if !hasPerm(PermBucketSetDataPlacement) {
 			return apiError(http.StatusForbidden, errs.New("not authorized to change bucket placement"))
 		}
-		if _, ok := s.placement[*req.Placement]; !ok {
+		if _, ok := s.placement.Get(*req.Placement); !ok {
 			return apiError(http.StatusBadRequest, errs.New("invalid placement ID %d", *req.Placement))
 		}
 	}

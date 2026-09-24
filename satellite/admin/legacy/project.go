@@ -1070,7 +1070,7 @@ func (server *Server) updatePlacementForProject(w http.ResponseWriter, r *http.R
 
 	placement := storj.PlacementConstraint(parsed)
 
-	_, ok = server.placement[placement]
+	_, ok = server.placement.Get(placement)
 	if !ok {
 		sendJSONError(w, "unknown placement parameter", "", http.StatusBadRequest)
 		return

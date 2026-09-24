@@ -21,7 +21,7 @@ func Module(ball *mud.Ball) {
 	mud.Implementation[[]rangedloop.Observer, *PieceList](ball)
 
 	config.RegisterConfig[ExpansionFactorConfig](ball, "nodeaudit.expansion-factor")
-	mud.Provide[*ExpansionFactor](ball, func(log *zap.Logger, overlayService *overlay.Service, placements nodeselection.PlacementDefinitions, config ExpansionFactorConfig, overlayConfig overlay.Config) *ExpansionFactor {
+	mud.Provide[*ExpansionFactor](ball, func(log *zap.Logger, overlayService *overlay.Service, placements nodeselection.PlacementProvider, config ExpansionFactorConfig, overlayConfig overlay.Config) *ExpansionFactor {
 		// Fall back to the same list repair uses, so the healthy classification here
 		// matches the repair checker instead of silently skipping the excluded-country
 		// check. Mirrors satellite/repair/checker.Module.

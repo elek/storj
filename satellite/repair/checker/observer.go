@@ -47,11 +47,12 @@ type Observer struct {
 	excludedCountryCodes     map[location.CountryCode]struct{}
 	doDeclumping             bool
 	doPlacementCheck         bool
-	placements               nodeselection.PlacementDefinitions
+	placementProvider        nodeselection.PlacementProvider
 	health                   Health
 
 	// the following are reset on each iteration
 	startTime  time.Time
+	placements nodeselection.PlacementDefinitions
 	TotalStats aggregateStatsPlacements
 
 	mu             sync.Mutex
@@ -64,7 +65,7 @@ type redundancyStyle struct {
 }
 
 // NewObserver creates new checker observer instance.
-func NewObserver(logger *zap.Logger, repairQueue queue.RepairQueue, overlay *overlay.Service, placements nodeselection.PlacementDefinitions, config Config, health Health) *Observer {
+func NewObserver(logger *zap.Logger, repairQueue queue.RepairQueue, overlay *overlay.Service, placements nodeselection.PlacementProvider, config Config, health Health) *Observer {
 	excludedCountryCodes := make(map[location.CountryCode]struct{})
 	for _, countryCode := range config.RepairExcludedCountryCodes {
 		if cc := location.ToCountryCode(countryCode); cc != location.None {
@@ -91,7 +92,8 @@ func NewObserver(logger *zap.Logger, repairQueue queue.RepairQueue, overlay *ove
 		excludedCountryCodes:     excludedCountryCodes,
 		doDeclumping:             config.DoDeclumping,
 		doPlacementCheck:         config.DoPlacementCheck,
-		placements:               placements,
+		placementProvider:        placements,
+		placements:               placements.All(),
 		health:                   health,
 		statsCollector:           make(map[redundancyStyle]*observerRSStats),
 	}
@@ -161,6 +163,7 @@ func (observer *Observer) Start(ctx context.Context, startTime time.Time) (err e
 	}
 
 	observer.startTime = startTime
+	observer.placements = observer.placementProvider.All()
 	// Reuse the allocated slice.
 	observer.TotalStats = observer.TotalStats[:0]
 

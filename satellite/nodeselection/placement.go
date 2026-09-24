@@ -166,8 +166,57 @@ var ErrPlacement = errs.Class("placement")
 // PlacementRules can crate filter based on the placement identifier.
 type PlacementRules func(constraint storj.PlacementConstraint) (filter NodeFilter, selector DownloadSelector)
 
+// PlacementProvider provides the placement definitions.
+//
+// Implementations may change the definitions over time. Consumers should
+// look up placements when they need them (or take a snapshot with All at
+// well-defined points, like the start of a segment loop) instead of caching
+// them forever.
+type PlacementProvider interface {
+	// Get returns the placement definition of the given placement ID.
+	Get(id storj.PlacementConstraint) (Placement, bool)
+	// All returns a snapshot of all the known placement definitions.
+	// The returned map must not be modified.
+	All() PlacementDefinitions
+}
+
 // PlacementDefinitions can include the placement definitions for each known identifier.
 type PlacementDefinitions map[storj.PlacementConstraint]Placement
+
+var _ PlacementProvider = PlacementDefinitions{}
+
+// Get implements PlacementProvider.
+func (d PlacementDefinitions) Get(id storj.PlacementConstraint) (Placement, bool) {
+	p, ok := d[id]
+	return p, ok
+}
+
+// All implements PlacementProvider.
+func (d PlacementDefinitions) All() PlacementDefinitions {
+	return d
+}
+
+// PlacementRulesFromProvider creates PlacementRules which always use the current placement definitions of the provider.
+func PlacementRulesFromProvider(provider PlacementProvider) PlacementRules {
+	return func(constraint storj.PlacementConstraint) (filter NodeFilter, selector DownloadSelector) {
+		if p, found := provider.Get(constraint); found {
+			return p.NodeFilter, p.DownloadSelector
+		}
+		return NodeFilters{
+			ExcludeAllFilter{},
+		}, ExcludeAllDownloadSelector
+	}
+}
+
+// FindPlacementByName returns the ID of the placement with the given name.
+func FindPlacementByName(provider PlacementProvider, name string) (storj.PlacementConstraint, bool) {
+	for id, p := range provider.All() {
+		if p.Name == name {
+			return id, true
+		}
+	}
+	return 0, false
+}
 
 // ConfigurablePlacementRule is a string configuration includes all placement rules in the form of id1:def1,id2:def2...
 type ConfigurablePlacementRule struct {
@@ -438,12 +487,7 @@ func (d PlacementDefinitions) AddPlacementFromString(definitions string) error {
 
 // CreateFilters implements PlacementCondition.
 func (d PlacementDefinitions) CreateFilters(constraint storj.PlacementConstraint) (filter NodeFilter, selector DownloadSelector) {
-	if filters, found := d[constraint]; found {
-		return filters.NodeFilter, filters.DownloadSelector
-	}
-	return NodeFilters{
-		ExcludeAllFilter{},
-	}, ExcludeAllDownloadSelector
+	return PlacementRulesFromProvider(d)(constraint)
 }
 
 // SupportedPlacements returns all the IDs, which have associated placement rules.

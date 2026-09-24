@@ -77,13 +77,14 @@ func newNodeInfo(node nodeselection.SelectedNode, group string, expectedFree, cu
 // Balancer implements rangedloop.Observer.
 // It identifies segments that should be moved to rebalance disk usage across nodes.
 type Balancer struct {
-	log             *zap.Logger
-	config          Config
-	uploadNodeCache *overlay.UploadNodeCache
-	placements      nodeselection.PlacementDefinitions
-	client          *taskqueue.Client
+	log               *zap.Logger
+	config            Config
+	uploadNodeCache   *overlay.UploadNodeCache
+	placementProvider nodeselection.PlacementProvider
+	client            *taskqueue.Client
 
 	// state populated during Start, read-only during Fork/Process
+	placements          nodeselection.PlacementDefinitions
 	nodeCache           map[storj.NodeID]*nodeInfo
 	groupDestCandidates map[string][]*nodeInfo
 }
@@ -92,16 +93,16 @@ type Balancer struct {
 func NewBalancer(
 	log *zap.Logger,
 	uploadNodeCache *overlay.UploadNodeCache,
-	placements nodeselection.PlacementDefinitions,
+	placements nodeselection.PlacementProvider,
 	client *taskqueue.Client,
 	config Config,
 ) *Balancer {
 	return &Balancer{
-		log:             log,
-		config:          config,
-		uploadNodeCache: uploadNodeCache,
-		placements:      placements,
-		client:          client,
+		log:               log,
+		config:            config,
+		uploadNodeCache:   uploadNodeCache,
+		placementProvider: placements,
+		client:            client,
 	}
 }
 
@@ -110,6 +111,8 @@ var _ rangedloop.Observer = (*Balancer)(nil)
 // Start is called at the beginning of each segment loop.
 func (b *Balancer) Start(ctx context.Context, startTime time.Time) (err error) {
 	defer mon.Task()(&ctx)(&err)
+
+	b.placements = b.placementProvider.All()
 
 	b.nodeCache = make(map[storj.NodeID]*nodeInfo)
 	b.groupDestCandidates = make(map[string][]*nodeInfo)

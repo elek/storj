@@ -350,8 +350,7 @@ type Service struct {
 	uploadSelectionCache   *UploadSelectionCache
 	downloadSelectionCache *DownloadSelectionCache
 	LastNetFunc            LastNetFunc
-	placementDefinitions   nodeselection.PlacementDefinitions
-	placementLookup        map[string]storj.PlacementConstraint
+	placements             nodeselection.PlacementProvider
 	sendNodeEmails         bool
 }
 
@@ -359,7 +358,7 @@ type Service struct {
 type LastNetFunc func(config NodeSelectionConfig, ip net.IP, port string) (string, error)
 
 // NewService returns a new Service.
-func NewService(log *zap.Logger, db DB, nodeEvents nodeevents.DB, uploadSelectionCache *UploadSelectionCache, downloadSelectionCache *DownloadSelectionCache, placements nodeselection.PlacementDefinitions, satelliteAddr, satelliteName string, config Config, ncfg nodeevents.Config) (*Service, error) {
+func NewService(log *zap.Logger, db DB, nodeEvents nodeevents.DB, uploadSelectionCache *UploadSelectionCache, downloadSelectionCache *DownloadSelectionCache, placements nodeselection.PlacementProvider, satelliteAddr, satelliteName string, config Config, ncfg nodeevents.Config) (*Service, error) {
 	err := config.Node.AsOfSystemTime.isValid()
 	if err != nil {
 		return nil, errs.Wrap(err)
@@ -373,10 +372,6 @@ func NewService(log *zap.Logger, db DB, nodeEvents nodeevents.DB, uploadSelectio
 		}
 	}
 
-	placementLookup := make(map[string]storj.PlacementConstraint, len(placements))
-	for _, placement := range placements {
-		placementLookup[placement.Name] = placement.ID
-	}
 	return &Service{
 		log:                  log,
 		db:                   db,
@@ -392,9 +387,8 @@ func NewService(log *zap.Logger, db DB, nodeEvents nodeevents.DB, uploadSelectio
 		downloadSelectionCache: downloadSelectionCache,
 		LastNetFunc:            MaskOffLastNet,
 
-		placementDefinitions: placements,
-		placementLookup:      placementLookup,
-		sendNodeEmails:       ncfg.SendNodeEmails,
+		placements:     placements,
+		sendNodeEmails: ncfg.SendNodeEmails,
 	}, nil
 }
 
@@ -415,7 +409,7 @@ func (service *Service) Close() error {
 }
 
 // NewUploadSelectionCacheFromConfig creates an UploadSelectionCache from overlay config and placement definitions.
-func NewUploadSelectionCacheFromConfig(log *zap.Logger, db DB, config Config, placements nodeselection.PlacementDefinitions) (*UploadSelectionCache, error) {
+func NewUploadSelectionCacheFromConfig(log *zap.Logger, db DB, config Config, placements nodeselection.PlacementProvider) (*UploadSelectionCache, error) {
 	defaultSelection := nodeselection.NodeFilters{}
 	if len(config.Node.UploadExcludedCountryCodes) > 0 {
 		set := location.NewFullSet()
@@ -435,9 +429,9 @@ func NewUploadSelectionCacheFromConfig(log *zap.Logger, db DB, config Config, pl
 }
 
 // NewDownloadSelectionCacheFromConfig creates a DownloadSelectionCache from overlay config and placement definitions.
-func NewDownloadSelectionCacheFromConfig(log *zap.Logger, db DB, config Config, placements nodeselection.PlacementDefinitions) (*DownloadSelectionCache, error) {
+func NewDownloadSelectionCacheFromConfig(log *zap.Logger, db DB, config Config, placements nodeselection.PlacementProvider) (*DownloadSelectionCache, error) {
 	return NewDownloadSelectionCache(log, db,
-		placements.CreateFilters,
+		nodeselection.PlacementRulesFromProvider(placements),
 		DownloadSelectionCacheConfig{
 			Staleness:      config.NodeSelectionCache.Staleness,
 			OnlineWindow:   config.Node.OnlineWindow,
@@ -856,13 +850,13 @@ func (service *Service) GetNodeTags(ctx context.Context, id storj.NodeID) (nodes
 // GetLocationFromPlacement returns the location identifier of the bucket.
 // It comes from the name of the placement (or `nodeselection.Location` in case of legacy config).
 func (service *Service) GetLocationFromPlacement(placement storj.PlacementConstraint) string {
-	return service.placementDefinitions[placement].Name
+	p, _ := service.placements.Get(placement)
+	return p.Name
 }
 
 // GetPlacementConstraintFromName returns the placement constraint given the placement name.
 func (service *Service) GetPlacementConstraintFromName(name string) (id storj.PlacementConstraint, exists bool) {
-	id, exists = service.placementLookup[name]
-	return id, exists
+	return nodeselection.FindPlacementByName(service.placements, name)
 }
 
 // ResolveIPAndNetwork resolves the target address and determines its IP and appropriate last_net, as indicated.

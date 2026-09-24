@@ -47,11 +47,11 @@ type UploadSelectionCache struct {
 	cache sync2.ReadCacheOf[uploadSelectionCacheState]
 
 	defaultFilters nodeselection.NodeFilters
-	placements     nodeselection.PlacementDefinitions
+	placements     nodeselection.PlacementProvider
 }
 
 // NewUploadSelectionCache creates a new cache that keeps a list of all the storage nodes that are qualified to store data.
-func NewUploadSelectionCache(log *zap.Logger, db UploadSelectionDB, staleness time.Duration, config NodeSelectionConfig, defaultFilter nodeselection.NodeFilters, placements nodeselection.PlacementDefinitions) (*UploadSelectionCache, error) {
+func NewUploadSelectionCache(log *zap.Logger, db UploadSelectionDB, staleness time.Duration, config NodeSelectionConfig, defaultFilter nodeselection.NodeFilters, placements nodeselection.PlacementProvider) (*UploadSelectionCache, error) {
 	cache := &UploadSelectionCache{
 		log:             log,
 		db:              db,
@@ -87,8 +87,10 @@ func (cache *UploadSelectionCache) read(ctx context.Context) (_ uploadSelectionC
 	}
 
 	var allNodes = append(append([]*nodeselection.SelectedNode{}, reputableNodes...), newNodes...)
-	reportMetrics(allNodes, cache.placements)
-	state := nodeselection.InitState(ctx, allNodes, cache.placements)
+	// placement definitions are refreshed together with the nodes.
+	placements := cache.placements.All()
+	reportMetrics(allNodes, placements)
+	state := nodeselection.InitState(ctx, allNodes, placements)
 	return uploadSelectionCacheState{
 		state: state,
 		nodes: allNodes,

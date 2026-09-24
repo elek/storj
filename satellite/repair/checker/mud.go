@@ -32,7 +32,7 @@ func Module(ball *mud.Ball) {
 		}
 		return health
 	})
-	mud.Provide[*Observer](ball, func(log *zap.Logger, repairQueue queue.RepairQueue, overlay *overlay.Service, placements nodeselection.PlacementDefinitions, config Config, config2 overlay.Config, health Health) *Observer {
+	mud.Provide[*Observer](ball, func(log *zap.Logger, repairQueue queue.RepairQueue, overlay *overlay.Service, placements nodeselection.PlacementProvider, config Config, config2 overlay.Config, health Health) *Observer {
 		if len(config.RepairExcludedCountryCodes) == 0 {
 			config.RepairExcludedCountryCodes = config2.RepairExcludedCountryCodes
 		}

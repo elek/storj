@@ -104,7 +104,7 @@ type Endpoint struct {
 	zstdEncoder                    *zstd.Encoder
 	trackers                       *Trackers
 	trustedUplinks                 *trust.TrustedPeersList
-	placement                      nodeselection.PlacementDefinitions
+	placement                      nodeselection.PlacementProvider
 	placementEdgeUrlOverrides      console.PlacementEdgeURLOverrides
 	selfServePlacements            map[storj.PlacementConstraint]console.PlacementDetail
 	selfServePlacementEnabled      bool
@@ -127,7 +127,7 @@ func NewEndpoint(log *zap.Logger, buckets *buckets.Service, metabaseDB *metabase
 	apiKeys APIKeys, apiKeyTails console.APIKeyTails, projectUsage *accounting.Service, projects console.Projects,
 	projectMembers console.ProjectMembers, users console.Users, satellite signing.Signer, revocations revocation.DB,
 	trackers *Trackers, trustedUplinks *trust.TrustedPeersList, config Config,
-	migrationModeFlag *MigrationModeFlagExtension, placement nodeselection.PlacementDefinitions, consoleConfig consoleweb.Config,
+	migrationModeFlag *MigrationModeFlagExtension, placement nodeselection.PlacementProvider, consoleConfig consoleweb.Config,
 	ordersConfig orders.Config, nodeSelectionStats *NodeSelectionStats,
 	bucketEventingCache *eventing.ConfigCache, entitlementsService *entitlements.Service, entitlementsConfig entitlements.Config,
 	projectLimitEventsDB projectlimitevents.DB,
@@ -615,7 +615,8 @@ func (endpoint *Endpoint) usageTracking(keyInfo *console.APIKeyInfo, header *pb.
 }
 
 func (endpoint *Endpoint) getRSProto(placementID storj.PlacementConstraint) *pb.RedundancyScheme {
-	rs := endpoint.config.RS.Override(endpoint.placement[placementID].EC)
+	placement, _ := endpoint.placement.Get(placementID)
+	rs := endpoint.config.RS.Override(placement.EC)
 	return &pb.RedundancyScheme{
 		Type:             pb.RedundancyScheme_RS,
 		MinReq:           int32(rs.Min),

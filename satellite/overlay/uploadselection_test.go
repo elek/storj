@@ -600,6 +600,65 @@ func TestGetNodesError(t *testing.T) {
 	require.Error(t, err)
 }
 
+// switchablePlacementProvider is a PlacementProvider where the definitions can be replaced.
+type switchablePlacementProvider struct {
+	nodeselection.PlacementDefinitions
+}
+
+func TestRefreshPlacements(t *testing.T) {
+	ctx := testcontext.New(t)
+	defer ctx.Cleanup()
+
+	var nodes []*nodeselection.SelectedNode
+	for i := 0; i < 3; i++ {
+		nodes = append(nodes, &nodeselection.SelectedNode{
+			ID:      testrand.NodeID(),
+			LastNet: fmt.Sprintf("10.0.%d", i),
+			Vetted:  true,
+		})
+	}
+
+	provider := &switchablePlacementProvider{
+		PlacementDefinitions: nodeselection.TestPlacementDefinitions(),
+	}
+	cache, err := overlay.NewUploadSelectionCache(zap.NewNop(),
+		NewMockUploadSelectionDb(nodes, nil),
+		highStaleness,
+		nodeSelectionConfig,
+		nodeselection.NodeFilters{},
+		provider,
+	)
+	require.NoError(t, err)
+
+	cacheCtx, cacheCancel := context.WithCancel(ctx)
+	defer cacheCancel()
+	ctx.Go(func() error { return cache.Run(cacheCtx) })
+
+	const newPlacement = storj.PlacementConstraint(42)
+	require.NoError(t, cache.Refresh(ctx))
+	_, err = cache.GetNodes(ctx, overlay.FindStorageNodesRequest{RequestedCount: 1, Placement: newPlacement})
+	require.Error(t, err)
+
+	provider.PlacementDefinitions = nodeselection.NewPlacementDefinitions(nodeselection.Placement{
+		ID:         newPlacement,
+		NodeFilter: nodeselection.AnyFilter{},
+		Selector:   nodeselection.RandomSelector(),
+	})
+
+	// definitions are used only after the next refresh.
+	_, err = cache.GetNodes(ctx, overlay.FindStorageNodesRequest{RequestedCount: 1, Placement: newPlacement})
+	require.Error(t, err)
+
+	require.NoError(t, cache.Refresh(ctx))
+	selected, err := cache.GetNodes(ctx, overlay.FindStorageNodesRequest{RequestedCount: 3, Placement: newPlacement})
+	require.NoError(t, err)
+	require.Len(t, selected, 3)
+
+	// placement removed from the provider is not available after the refresh.
+	_, err = cache.GetNodes(ctx, overlay.FindStorageNodesRequest{RequestedCount: 1, Placement: storj.DefaultPlacement})
+	require.Error(t, err)
+}
+
 func TestNewNodeFraction(t *testing.T) {
 	satellitedbtest.Run(t, func(ctx *testcontext.Context, t *testing.T, db satellite.DB) {
 		newNodeFraction := 0.2

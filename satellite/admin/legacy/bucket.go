@@ -54,7 +54,7 @@ func (server *Server) updatePlacementForBucket(w http.ResponseWriter, r *http.Re
 
 	placement := storj.PlacementConstraint(parsed)
 
-	if _, ok := server.placement[placement]; !ok {
+	if _, ok := server.placement.Get(placement); !ok {
 		sendJSONError(w, "unknown placement parameter", "", http.StatusBadRequest)
 		return
 	}
@@ -162,7 +162,7 @@ func (server *Server) updateBucketValueAttributionPlacement(w http.ResponseWrite
 		}
 
 		placementVal := storj.PlacementConstraint(parsed)
-		if _, ok := server.placement[placementVal]; !ok {
+		if _, ok := server.placement.Get(placementVal); !ok {
 			sendJSONError(w, "unknown placement parameter", "", http.StatusBadRequest)
 			return
 		}
