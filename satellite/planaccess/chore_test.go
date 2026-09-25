@@ -78,8 +78,8 @@ func TestChore(t *testing.T) {
 		chore := planaccess.NewChore(zaptest.NewLogger(t), db.OverlayCache(), db.Console(), accountingDB,
 			nodeselection.PlacementDefinitions{
 				storj.DefaultPlacement: {ID: storj.DefaultPlacement, Name: "global"},
-				ownPlacement:           {ID: ownPlacement, Name: withPlacement.ID.String()},
-				ownPlacement + 1:       {ID: ownPlacement + 1, Name: fewNodes.ID.String()},
+				ownPlacement:           {ID: ownPlacement, Name: string(nodes.EncodeOwner(withPlacement.ID))},
+				ownPlacement + 1:       {ID: ownPlacement + 1, Name: string(nodes.EncodeOwner(fewNodes.ID))},
 			},
 			satelliteID,
 			planaccess.Config{Interval: time.Hour, OnlineWindow: 4 * time.Hour, TallyLookback: 48 * time.Hour, MinNodes: 3},
@@ -188,7 +188,7 @@ func setOwner(ctx context.Context, t *testing.T, db satellite.DB, signer storj.N
 		tags = append(tags, nodeselection.NodeTag{
 			NodeID:   id,
 			Name:     nodes.OwnerTagName,
-			Value:    owner.Bytes(),
+			Value:    nodes.EncodeOwner(owner),
 			SignedAt: time.Now(),
 			Signer:   signer,
 		})

@@ -8,7 +8,9 @@
 // nodes (see satellite/console/consoleext/nodes). Every owner gets a project on
 // the default placement, locked down to zero limits. Owners running enough
 // active nodes also get a project on the placement named after their user ID,
-// sized to the capacity of their nodes.
+// sized to the capacity of their nodes. The placement name is the owner tag
+// value itself (see nodes.EncodeOwner), so that a placement filtering on the
+// owner tag carries the same string as its name.
 package planaccess
 
 import (
@@ -157,7 +159,7 @@ func (chore *Chore) ownerGroups(ctx context.Context) (_ []ownerGroup, err error)
 		if err != nil {
 			continue
 		}
-		owner, err := uuid.FromBytes(tag.Value)
+		owner, err := nodes.DecodeOwner(tag.Value)
 		if err != nil || owner.IsZero() {
 			chore.log.Warn("invalid owner tag", zap.Stringer("node", node.ID))
 			continue
@@ -223,9 +225,12 @@ func (chore *Chore) reconcile(ctx context.Context, g ownerGroup, used map[storj.
 		return nil
 	}
 
-	placement, found := nodeselection.FindPlacementByName(chore.placements, user.ID.String())
+	// N.B. the placement name has to match the owner tag value, not the dashed
+	// form of the user ID.
+	placementName := string(nodes.EncodeOwner(user.ID))
+	placement, found := nodeselection.FindPlacementByName(chore.placements, placementName)
 	if !found {
-		log.Warn("no placement is defined for the owner of confirmed nodes", zap.String("placement_name", user.ID.String()))
+		log.Warn("no placement is defined for the owner of confirmed nodes", zap.String("placement_name", placementName))
 		return nil
 	}
 

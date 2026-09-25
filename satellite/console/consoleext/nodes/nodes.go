@@ -7,8 +7,8 @@
 package nodes
 
 import (
-	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -20,6 +20,7 @@ import (
 	"go.uber.org/zap"
 
 	"storj.io/common/storj"
+	"storj.io/common/uuid"
 	"storj.io/storj/private/web"
 	"storj.io/storj/satellite/console"
 	"storj.io/storj/satellite/console/consoleext"
@@ -43,7 +44,9 @@ const maxNodes = 1000
 const onlineWindow = 4 * time.Hour
 
 // OwnerTagName is the node tag under which the confirmed owner is recorded. Its
-// value is the raw 16 bytes of the console user's UUID.
+// value is the console user's ID as lower case hex text (see EncodeOwner), so
+// that the nodeselection package, which reads tag values as strings, can match
+// on it in placement and selector definitions.
 //
 // The tag is only meaningful together with its signer: node_tags rows are keyed
 // by (node_id, name, signer), so an owner tag written by this satellite can only
@@ -51,6 +54,29 @@ const onlineWindow = 4 * time.Hour
 // check-in cannot produce a row with the satellite's signer unless the
 // satellite actually signed it (satellite/contact/service.go:194).
 const OwnerTagName = "owner"
+
+// EncodeOwner returns the owner tag value for the given user: the UTF-8 text of
+// the user ID's 16 bytes in lower case hex, without dashes.
+func EncodeOwner(owner uuid.UUID) []byte {
+	return []byte(hex.EncodeToString(owner.Bytes()))
+}
+
+// DecodeOwner parses an owner tag value written by EncodeOwner. Only the exact
+// form EncodeOwner produces is accepted, so that string comparisons of tag
+// values (as nodeselection does) agree with comparisons of the decoded IDs.
+func DecodeOwner(value []byte) (uuid.UUID, error) {
+	var owner uuid.UUID
+	if hex.EncodedLen(len(owner)) != len(value) {
+		return uuid.UUID{}, Error.New("invalid owner tag length: %d", len(value))
+	}
+	if _, err := hex.Decode(owner[:], value); err != nil {
+		return uuid.UUID{}, Error.Wrap(err)
+	}
+	if string(EncodeOwner(owner)) != string(value) {
+		return uuid.UUID{}, Error.New("owner tag is not lower case hex")
+	}
+	return owner, nil
+}
 
 // Node is a storage node as shown in the console.
 type Node struct {
@@ -181,7 +207,7 @@ func (e *Extension) ConfirmNode(w http.ResponseWriter, r *http.Request) {
 	err = e.overlayDB.UpdateNodeTags(ctx, nodeselection.NodeTags{{
 		NodeID:   nodeID,
 		Name:     OwnerTagName,
-		Value:    user.ID.Bytes(),
+		Value:    EncodeOwner(user.ID),
 		SignedAt: e.nowFn(),
 		Signer:   e.satelliteID,
 	}})
@@ -230,7 +256,6 @@ func (e *Extension) getNodes(ctx context.Context, user *console.User) (_ Page, e
 	}
 
 	now := e.nowFn()
-	owner := user.ID.Bytes()
 	page.Nodes = make([]Node, 0, len(dossiers))
 	for _, d := range dossiers {
 		var dqReason *string
@@ -257,7 +282,7 @@ func (e *Extension) getNodes(ctx context.Context, user *console.User) (_ Page, e
 			CountryCode:            d.CountryCode.String(),
 			Version:                d.Version.Version,
 			CreatedAt:              d.CreatedAt,
-			Confirmed:              e.confirmedBy(d.Tags, owner),
+			Confirmed:              e.confirmedBy(d.Tags, user.ID),
 		})
 	}
 
@@ -267,12 +292,16 @@ func (e *Extension) getNodes(ctx context.Context, user *console.User) (_ Page, e
 // confirmedBy reports whether this satellite has tagged the node as owned by
 // owner. A tag naming somebody else counts as unconfirmed, so that an operator
 // who took over a node's email can claim it.
-func (e *Extension) confirmedBy(tags nodeselection.NodeTags, owner []byte) bool {
+func (e *Extension) confirmedBy(tags nodeselection.NodeTags, owner uuid.UUID) bool {
 	tag, err := tags.FindBySignerAndName(e.satelliteID, OwnerTagName)
 	if err != nil {
 		return false
 	}
-	return bytes.Equal(tag.Value, owner)
+	recorded, err := DecodeOwner(tag.Value)
+	if err != nil {
+		return false
+	}
+	return recorded == owner
 }
 
 func (e *Extension) serveJSONError(ctx context.Context, w http.ResponseWriter, status int, err error) {

@@ -384,7 +384,7 @@ func TestConfirmNode(t *testing.T) {
 		require.Equal(t, nodeselection.NodeTag{
 			NodeID:   d.Id,
 			Name:     OwnerTagName,
-			Value:    user.ID.Bytes(),
+			Value:    EncodeOwner(user.ID),
 			SignedAt: now,
 			Signer:   satelliteID,
 		}, db.gotTags[0])
@@ -400,8 +400,43 @@ func ownerTags(nodeID, signer storj.NodeID, owner uuid.UUID) nodeselection.NodeT
 	return nodeselection.NodeTags{{
 		NodeID:   nodeID,
 		Name:     OwnerTagName,
-		Value:    owner.Bytes(),
+		Value:    EncodeOwner(owner),
 		SignedAt: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC),
 		Signer:   signer,
 	}}
+}
+
+func TestOwnerTagEncoding(t *testing.T) {
+	owner, err := uuid.FromString("0123abcd-4567-89ef-0123-456789abcdef")
+	require.NoError(t, err)
+
+	value := EncodeOwner(owner)
+	require.Equal(t, "0123abcd456789ef0123456789abcdef", string(value))
+
+	decoded, err := DecodeOwner(value)
+	require.NoError(t, err)
+	require.Equal(t, owner, decoded)
+
+	t.Run("readable by nodeselection", func(t *testing.T) {
+		satelliteID := testrand.NodeID()
+		node := nodeselection.SelectedNode{
+			ID:   testrand.NodeID(),
+			Tags: ownerTags(testrand.NodeID(), satelliteID, owner),
+		}
+		attr := nodeselection.NodeTagAttribute(satelliteID, OwnerTagName)
+		require.Equal(t, "0123abcd456789ef0123456789abcdef", attr(node))
+	})
+
+	for name, invalid := range map[string][]byte{
+		"empty":      nil,
+		"raw bytes":  owner.Bytes(),
+		"upper case": []byte("0123ABCD456789EF0123456789ABCDEF"),
+		"dashes":     []byte(owner.String()),
+		"not hex":    []byte("0123abcd456789ef0123456789abcdeg"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := DecodeOwner(invalid)
+			require.Error(t, err)
+		})
+	}
 }
