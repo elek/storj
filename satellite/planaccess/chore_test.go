@@ -5,11 +5,13 @@ package planaccess_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+	"gopkg.in/yaml.v3"
 
 	"storj.io/common/memory"
 	"storj.io/common/pb"
@@ -94,10 +96,13 @@ func TestChore(t *testing.T) {
 				switch project.DefaultPlacement {
 				case storj.DefaultPlacement:
 					require.Equal(t, existing.ID, project.ID)
+					require.Equal(t, "Disabled due to not enough SNOs", project.Description)
 					requireInt64(t, 0, project.SegmentLimit)
 					requireInt(t, 0, project.RateLimitPut)
 					requireInt(t, 0, project.RateLimitGet)
 				case ownPlacement:
+					require.Equal(t, "Stored on own storagenodes", project.Description)
+					requireInt64(t, 1_000_000_000, project.SegmentLimit)
 					require.NotNil(t, project.StorageLimit)
 					// (free 1 GB + 2 GB, used 3 GB + 1 GB) * 0.95
 					require.Equal(t, int64(float64(7*memory.GB)*0.95), project.StorageLimit.Int64())
@@ -116,16 +121,27 @@ func TestChore(t *testing.T) {
 				}
 			}
 
-			// without a placement, or with too few active nodes, only the default
-			// placement project is ensured.
-			for _, owner := range []uuid.UUID{withoutPlacement.ID, fewNodes.ID} {
-				projects, err = db.Console().Projects().GetOwnActive(ctx, owner)
-				require.NoError(t, err)
-				require.Len(t, projects, 1)
-				require.Equal(t, storj.DefaultPlacement, projects[0].DefaultPlacement)
-				requireInt64(t, 0, projects[0].SegmentLimit)
-				requireInt(t, 0, projects[0].RateLimitPut)
-				requireInt(t, 0, projects[0].RateLimitGet)
+			// without a placement, only the default placement project is ensured.
+			projects, err = db.Console().Projects().GetOwnActive(ctx, withoutPlacement.ID)
+			require.NoError(t, err)
+			require.Len(t, projects, 1)
+			require.Equal(t, storj.DefaultPlacement, projects[0].DefaultPlacement)
+			requireLockedDown(t, projects[0])
+
+			// with too few active nodes, the own placement project is locked down.
+			projects, err = db.Console().Projects().GetOwnActive(ctx, fewNodes.ID)
+			require.NoError(t, err)
+			require.Len(t, projects, 2)
+			for _, project := range projects {
+				requireLockedDown(t, project)
+				switch project.DefaultPlacement {
+				case storj.DefaultPlacement:
+					require.Equal(t, "Disabled due to not enough SNOs", project.Description)
+				case ownPlacement + 1:
+					require.Equal(t, "Disabled due to not enough nodes", project.Description)
+				default:
+					t.Fatalf("unexpected placement %d", project.DefaultPlacement)
+				}
 			}
 
 			projects, err = db.Console().Projects().GetOwnActive(ctx, inactive.ID)
@@ -139,7 +155,208 @@ func TestChore(t *testing.T) {
 		// a second run doesn't create more projects.
 		require.NoError(t, chore.RunOnce(ctx))
 		check()
+
+		// with a lower minimum the locked down own placement project is enabled.
+		chore = planaccess.NewChore(zaptest.NewLogger(t), db.OverlayCache(), db.Console(), accountingDB,
+			nodeselection.PlacementDefinitions{
+				storj.DefaultPlacement: {ID: storj.DefaultPlacement, Name: "global"},
+				ownPlacement + 1:       {ID: ownPlacement + 1, Name: string(nodes.EncodeOwner(fewNodes.ID))},
+			},
+			satelliteID,
+			planaccess.Config{Interval: time.Hour, OnlineWindow: 4 * time.Hour, TallyLookback: 48 * time.Hour, MinNodes: 2},
+		)
+		require.NoError(t, chore.RunOnce(ctx))
+
+		projects, err := db.Console().Projects().GetOwnActive(ctx, fewNodes.ID)
+		require.NoError(t, err)
+		require.Len(t, projects, 2)
+		for _, project := range projects {
+			if project.DefaultPlacement != ownPlacement+1 {
+				continue
+			}
+			require.Equal(t, "Stored on own storagenodes", project.Description)
+			requireInt64(t, 1_000_000_000, project.SegmentLimit)
+			requireInt(t, 10000, project.RateLimitPut)
+			requireInt(t, 10000, project.RateLimitGet)
+		}
 	})
+}
+
+func TestChoreExemptions(t *testing.T) {
+	satellitedbtest.Run(t, func(ctx *testcontext.Context, t *testing.T, db satellite.DB) {
+		satelliteID := testrand.NodeID()
+		now := time.Now()
+
+		withoutNodes := addUser(ctx, t, db, "without-nodes@storj.test", console.Active)
+		fewNodes := addUser(ctx, t, db, "few-nodes@storj.test", console.Active)
+		inactive := addUser(ctx, t, db, "inactive@storj.test", console.Inactive)
+
+		// a project with the name of a created project already exists.
+		_, err := db.Console().Projects().Insert(ctx, &console.Project{
+			Name:             fmt.Sprintf("placement %d", ownPlacement),
+			OwnerID:          withoutNodes.ID,
+			DefaultPlacement: ownPlacement + 5,
+		})
+		require.NoError(t, err)
+
+		// too few nodes, but exempt, so the own placement is enabled.
+		setOwner(ctx, t, db, satelliteID, fewNodes.ID, addNode(ctx, t, db, memory.GB, now), addNode(ctx, t, db, 2*memory.GB, now))
+
+		var exemptions []planaccess.Exemption
+		require.NoError(t, yaml.Unmarshal([]byte(fmt.Sprintf(`
+  - user: %s
+    placement: %d
+  - user: %s
+    placement: 99
+  - user: %s
+    placement: %d
+    limits:
+      storage: 10TB
+      rate-limit-put: 5
+  - user: %s
+    placement: %d
+  - user: %s
+    placement: %d
+  # the default placement, with the user ID in the owner tag form.
+  - user: %s
+    placement: 0
+    limits:
+      segment: 42
+  # invalid entries are skipped: a typo in the placement key (which must not
+  # be mistaken for the default placement), a duplicate and an invalid user.
+  - user: %s
+    placements: [%d]
+  - user: %s
+    placement: %d
+    limits:
+      storage: 1TB
+  - user: not-a-uuid
+    placement: %d
+`, withoutNodes.ID, ownPlacement, withoutNodes.ID, withoutNodes.ID, ownPlacement+1, fewNodes.ID, ownPlacement, inactive.ID, ownPlacement,
+			nodes.EncodeOwner(withoutNodes.ID), fewNodes.ID, ownPlacement+2, fewNodes.ID, ownPlacement, ownPlacement)), &exemptions))
+
+		chore := planaccess.NewChore(zaptest.NewLogger(t), db.OverlayCache(), db.Console(), db.StoragenodeAccounting(),
+			nodeselection.PlacementDefinitions{
+				storj.DefaultPlacement: {ID: storj.DefaultPlacement, Name: "global"},
+				ownPlacement:           {ID: ownPlacement, Name: "first"},
+				ownPlacement + 1:       {ID: ownPlacement + 1, Name: "second"},
+				ownPlacement + 2:       {ID: ownPlacement + 2, Name: string(nodes.EncodeOwner(fewNodes.ID))},
+			},
+			satelliteID,
+			planaccess.Config{Interval: time.Hour, OnlineWindow: 4 * time.Hour, TallyLookback: 48 * time.Hour, MinNodes: 20, Exemptions: exemptions},
+		)
+
+		type expectedProject struct {
+			description  string
+			storage      int64
+			bandwidth    *int64
+			segment      int64
+			rateLimitPut int
+		}
+		pb := int64(memory.PB)
+		expected := map[uuid.UUID]map[storj.PlacementConstraint]expectedProject{
+			// the undefined placement is skipped.
+			withoutNodes.ID: {
+				storj.DefaultPlacement: {description: "Provisioned to placement global", storage: pb, bandwidth: &pb, segment: 42, rateLimitPut: 10000},
+				ownPlacement:           {description: "Provisioned to placement first", storage: pb, bandwidth: &pb, rateLimitPut: 10000},
+				ownPlacement + 1:       {description: "Provisioned to placement second", storage: memory.TB.Int64() * 10, bandwidth: &pb, rateLimitPut: 5},
+			},
+			fewNodes.ID: {
+				ownPlacement:     {description: "Provisioned to placement first", storage: pb, bandwidth: &pb, rateLimitPut: 10000},
+				ownPlacement + 2: {description: "Stored on own storagenodes", storage: int64(float64(3*memory.GB) * 0.95), rateLimitPut: 10000},
+			},
+		}
+
+		check := func() {
+			for owner, placements := range expected {
+				projects, err := db.Console().Projects().GetOwnActive(ctx, owner)
+				require.NoError(t, err)
+
+				names := map[string]bool{}
+				found := map[storj.PlacementConstraint]bool{}
+				for _, project := range projects {
+					require.False(t, names[project.Name], "duplicated project name %q", project.Name)
+					names[project.Name] = true
+
+					want, ok := placements[project.DefaultPlacement]
+					if !ok && project.DefaultPlacement == storj.DefaultPlacement {
+						require.Equal(t, "Disabled due to not enough SNOs", project.Description)
+						requireLockedDown(t, project)
+						found[project.DefaultPlacement] = true
+						continue
+					}
+					if !ok {
+						continue
+					}
+					require.Equal(t, want.description, project.Description)
+					require.NotNil(t, project.StorageLimit)
+					require.Equal(t, want.storage, project.StorageLimit.Int64())
+					if want.bandwidth != nil {
+						require.NotNil(t, project.BandwidthLimit)
+						require.Equal(t, *want.bandwidth, project.BandwidthLimit.Int64())
+					}
+					if want.segment == 0 {
+						want.segment = 1_000_000_000
+					}
+					requireInt64(t, want.segment, project.SegmentLimit)
+					requireInt(t, want.rateLimitPut, project.RateLimitPut)
+					requireInt(t, 10000, project.RateLimitGet)
+					found[project.DefaultPlacement] = true
+				}
+				_, defaultExempt := placements[storj.DefaultPlacement]
+				if defaultExempt {
+					require.Len(t, found, len(placements), "owner %s", owner)
+				} else {
+					require.Len(t, found, len(placements)+1, "owner %s", owner)
+				}
+			}
+
+			// withoutNodes: the pre-existing project, the default and the two exempt ones.
+			projects, err := db.Console().Projects().GetOwnActive(ctx, withoutNodes.ID)
+			require.NoError(t, err)
+			require.Len(t, projects, 4)
+
+			// inactive users don't get projects, even if they are exempt.
+			projects, err = db.Console().Projects().GetOwnActive(ctx, inactive.ID)
+			require.NoError(t, err)
+			require.Empty(t, projects)
+		}
+
+		require.NoError(t, chore.RunOnce(ctx))
+		check()
+
+		// a second run doesn't create more projects.
+		require.NoError(t, chore.RunOnce(ctx))
+		check()
+	})
+}
+
+func TestExemptionsYAML(t *testing.T) {
+	user := testrand.UUID()
+
+	var config struct {
+		Exemptions []planaccess.Exemption `yaml:"plan-access.exemptions"`
+	}
+	require.NoError(t, yaml.Unmarshal([]byte(fmt.Sprintf(`
+plan-access.exemptions:
+  - user: %s
+    placement: 1
+  - user: %s
+    placement: 3
+    limits:
+      storage: 1TB
+      segment: 7
+`, user, user)), &config))
+
+	storage, segment := memory.TB, int64(7)
+	first, third := storj.PlacementConstraint(1), storj.PlacementConstraint(3)
+	require.Equal(t, []planaccess.Exemption{
+		{User: user.String(), Placement: &first},
+		{User: user.String(), Placement: &third, Limits: planaccess.Limits{Storage: &storage, Segment: &segment}},
+	}, config.Exemptions)
+
+	// invalid entries don't fail the parsing, they are skipped by the chore.
+	require.NoError(t, yaml.Unmarshal([]byte("plan-access.exemptions:\n  - user: invalid\n    placements: [1]\n"), &config))
 }
 
 func TestChoreMudWiring(t *testing.T) {
@@ -194,6 +411,13 @@ func setOwner(ctx context.Context, t *testing.T, db satellite.DB, signer storj.N
 		})
 	}
 	require.NoError(t, db.OverlayCache().UpdateNodeTags(ctx, tags))
+}
+
+func requireLockedDown(t *testing.T, project console.Project) {
+	t.Helper()
+	requireInt64(t, 0, project.SegmentLimit)
+	requireInt(t, 0, project.RateLimitPut)
+	requireInt(t, 0, project.RateLimitGet)
 }
 
 func requireInt64(t *testing.T, expected int64, actual *int64) {
