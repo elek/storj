@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -266,6 +267,157 @@ func failedMigration(ctx context.Context, t *testing.T, db tagsql.DB, testDB tag
 	err = db.QueryRowContext(ctx, `SELECT MAX(version) FROM `+dbName).Scan(&version)
 	assert.NoError(t, err)
 	assert.Equal(t, false, version.Valid)
+}
+
+func TestNamespaceMigrationSqlite(t *testing.T) {
+	ctx := testcontext.New(t)
+	defer ctx.Cleanup()
+
+	db, err := tagsql.Open(ctx, "sqlite3", ":memory:", nil)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, db.Close()) }()
+
+	namespaceMigration(ctx, t, db, &sqliteDB{DB: db})
+}
+
+func TestNamespaceMigration(t *testing.T) {
+	dbtest.Run(t, func(ctx *testcontext.Context, t *testing.T, connstr string) {
+		db, err := tempdb.OpenUnique(ctx, zaptest.NewLogger(t), connstr, "namespace-")
+		require.NoError(t, err)
+		defer func() { assert.NoError(t, db.Close()) }()
+
+		namespaceMigration(ctx, t, db.DB, &postgresDB{DB: db.DB})
+	})
+}
+
+// countingMigration returns a migration with the given number of steps, which increments counter on each executed step.
+func countingMigration(table, namespace string, testDB *tagsql.DB, stepCount int, counter *int) migrate.Migration {
+	m := migrate.Migration{
+		Table:     table,
+		Namespace: namespace,
+	}
+	for version := 1; version <= stepCount; version++ {
+		m.Steps = append(m.Steps, &migrate.Step{
+			DB:          testDB,
+			Description: "Step " + strconv.Itoa(version),
+			Version:     version,
+			Action: migrate.Func(func(ctx context.Context, log *zap.Logger, _ tagsql.DB, tx tagsql.Tx) error {
+				*counter++
+				return nil
+			}),
+		})
+	}
+	return m
+}
+
+func namespaceMigration(ctx context.Context, t *testing.T, db tagsql.DB, testDB tagsql.DB) {
+	dbName := strings.ToLower(`versions_` + strings.ReplaceAll(t.Name(), "/", "_"))
+	defer func() { assert.NoError(t, dropTables(ctx, db, dbName)) }()
+
+	var defaultSteps, fooSteps, barSteps int
+	defaultMigration := countingMigration(dbName, "", &testDB, 3, &defaultSteps)
+	fooMigration := countingMigration(dbName, "foo", &testDB, 2, &fooSteps)
+	barMigration := countingMigration(dbName, "bar", &testDB, 1, &barSteps)
+
+	require.NoError(t, defaultMigration.Run(ctx, zap.NewNop()))
+	require.Equal(t, 3, defaultSteps)
+
+	// other namespaces are not initialized yet, even if they use the same table
+	version, err := fooMigration.CurrentVersion(ctx, nil, testDB)
+	require.NoError(t, err)
+	require.Equal(t, -1, version)
+
+	require.NoError(t, fooMigration.Run(ctx, zap.NewNop()))
+	require.Equal(t, 2, fooSteps)
+
+	require.NoError(t, barMigration.Run(ctx, zap.NewNop()))
+	require.Equal(t, 1, barSteps)
+
+	for _, tc := range []struct {
+		migration migrate.Migration
+		version   int
+	}{
+		{defaultMigration, 3},
+		{fooMigration, 2},
+		{barMigration, 1},
+	} {
+		version, err := tc.migration.CurrentVersion(ctx, nil, testDB)
+		require.NoError(t, err)
+		require.Equal(t, tc.version, version, "namespace %q", tc.migration.Namespace)
+		require.NoError(t, tc.migration.ValidateVersions(ctx, zap.NewNop()))
+	}
+
+	// re-running migrations doesn't execute any steps again
+	require.NoError(t, defaultMigration.Run(ctx, zap.NewNop()))
+	require.NoError(t, fooMigration.Run(ctx, zap.NewNop()))
+	require.NoError(t, barMigration.Run(ctx, zap.NewNop()))
+	require.Equal(t, 3, defaultSteps)
+	require.Equal(t, 2, fooSteps)
+	require.Equal(t, 1, barSteps)
+}
+
+func TestLegacyVersionTableSqlite(t *testing.T) {
+	ctx := testcontext.New(t)
+	defer ctx.Cleanup()
+
+	db, err := tagsql.Open(ctx, "sqlite3", ":memory:", nil)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, db.Close()) }()
+
+	legacyVersionTable(ctx, t, db, &sqliteDB{DB: db})
+}
+
+func TestLegacyVersionTable(t *testing.T) {
+	dbtest.Run(t, func(ctx *testcontext.Context, t *testing.T, connstr string) {
+		db, err := tempdb.OpenUnique(ctx, zaptest.NewLogger(t), connstr, "legacy-")
+		require.NoError(t, err)
+		defer func() { assert.NoError(t, db.Close()) }()
+
+		legacyVersionTable(ctx, t, db.DB, &postgresDB{DB: db.DB})
+	})
+}
+
+func legacyVersionTable(ctx context.Context, t *testing.T, db tagsql.DB, testDB tagsql.DB) {
+	dbName := strings.ToLower(`versions_` + strings.ReplaceAll(t.Name(), "/", "_"))
+	defer func() { assert.NoError(t, dropTables(ctx, db, dbName)) }()
+
+	// version table, as it was created before the namespace column was introduced
+	/* #nosec G202 */ // This is a test besides the dbName value is generated in
+	// a controlled way
+	_, err := db.ExecContext(ctx, `CREATE TABLE `+dbName+` (version int, commited_at text)`) //nolint:misspell
+	require.NoError(t, err)
+	for _, version := range []string{"1", "2"} {
+		_, err = db.ExecContext(ctx, `INSERT INTO `+dbName+` (version, commited_at) VALUES (`+version+`, 'now')`) //nolint:misspell
+		require.NoError(t, err)
+	}
+
+	var defaultSteps, fooSteps int
+	defaultMigration := countingMigration(dbName, "", &testDB, 3, &defaultSteps)
+	fooMigration := countingMigration(dbName, "foo", &testDB, 2, &fooSteps)
+
+	// existing versions belong to the default namespace
+	version, err := defaultMigration.CurrentVersion(ctx, nil, testDB)
+	require.NoError(t, err)
+	require.Equal(t, 2, version)
+
+	// adding the column is idempotent
+	version, err = defaultMigration.CurrentVersion(ctx, nil, testDB)
+	require.NoError(t, err)
+	require.Equal(t, 2, version)
+
+	require.NoError(t, defaultMigration.Run(ctx, zap.NewNop()))
+	require.Equal(t, 1, defaultSteps, "only the missing step should be executed")
+
+	require.NoError(t, fooMigration.Run(ctx, zap.NewNop()))
+	require.Equal(t, 2, fooSteps)
+
+	version, err = defaultMigration.CurrentVersion(ctx, nil, testDB)
+	require.NoError(t, err)
+	require.Equal(t, 3, version)
+
+	version, err = fooMigration.CurrentVersion(ctx, nil, testDB)
+	require.NoError(t, err)
+	require.Equal(t, 2, version)
 }
 
 func TestTargetVersion(t *testing.T) {

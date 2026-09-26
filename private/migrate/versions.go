@@ -59,7 +59,10 @@ type Migration struct {
 	// NOTE: Always validates its value with the ValidTableName method before it's
 	// concatenated in a query string for avoiding SQL injection attacks.
 	Table string
-	Steps []*Step
+	// Namespace separates the versions of different migrations sharing the same Table.
+	// Empty by default.
+	Namespace string
+	Steps     []*Step
 }
 
 // Step describes a single step in migration.
@@ -244,9 +247,36 @@ func (migration *Migration) ensureVersionTable(ctx context.Context, log *zap.Log
 		return Error.Wrap(err)
 	}
 
-	createTableSQL := `CREATE TABLE IF NOT EXISTS ` + migration.Table + ` (version int, commited_at text)` //nolint:misspell
+	// varchar is used instead of text, as MySQL/TiDB doesn't support default values for text columns.
+	createTableSQL := `CREATE TABLE IF NOT EXISTS ` + migration.Table + ` (version int, commited_at text, namespace varchar(255) NOT NULL DEFAULT '')` //nolint:misspell
 	_, err = db.ExecContext(ctx, createTableSQL)
+	if err != nil {
+		return Error.Wrap(err)
+	}
+
+	// tables created before the namespace column was introduced should be upgraded
+	if migration.hasNamespaceColumn(ctx, db) {
+		return nil
+	}
+	_, err = db.ExecContext(ctx, `ALTER TABLE `+migration.Table+` ADD COLUMN namespace varchar(255) NOT NULL DEFAULT ''`)
+	if err != nil && migration.hasNamespaceColumn(ctx, db) {
+		// column is added concurrently by somebody else
+		return nil
+	}
 	return Error.Wrap(err)
+}
+
+// hasNamespaceColumn checks whether migration.Table already has the namespace column.
+// Probing with a query is used as it works the same way with all the supported databases.
+func (migration *Migration) hasNamespaceColumn(ctx context.Context, db tagsql.DB) bool {
+	/* #nosec G202 */ // Table name is white listed by the ValidTableName method
+	rows, err := db.QueryContext(ctx, `SELECT namespace FROM `+migration.Table+` WHERE 1 = 0`)
+	if err != nil {
+		return false
+	}
+	for rows.Next() {
+	}
+	return errs.Combine(rows.Err(), rows.Close()) == nil
 }
 
 // getLatestVersion finds the latest version in migration.Table.
@@ -260,7 +290,7 @@ func (migration *Migration) getLatestVersion(ctx context.Context, log *zap.Logge
 	var version sql.NullInt64
 	/* #nosec G202 */ // Table name is white listed by the ValidTableName method
 	// executed at the beginning of the function
-	err = db.QueryRowContext(ctx, `SELECT MAX(version) FROM `+migration.Table).Scan(&version)
+	err = db.QueryRowContext(ctx, rebind(db, `SELECT MAX(version) FROM `+migration.Table+` WHERE namespace = ?`), migration.Namespace).Scan(&version)
 	if errors.Is(err, sql.ErrNoRows) || !version.Valid {
 		version.Int64 = -1
 		err = nil
@@ -279,8 +309,8 @@ func (migration *Migration) addVersion(ctx context.Context, tx tagsql.Tx, db tag
 	/* #nosec G202 */ // Table name is white listed by the ValidTableName method
 	// executed at the beginning of the function
 	_, err = tx.ExecContext(ctx, rebind(db, `
-		INSERT INTO `+migration.Table+` (version, commited_at) VALUES (?, ?)`), //nolint:misspell
-		version, time.Now().String(),
+		INSERT INTO `+migration.Table+` (version, commited_at, namespace) VALUES (?, ?, ?)`), //nolint:misspell
+		version, time.Now().String(), migration.Namespace,
 	)
 	return err
 }
