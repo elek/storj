@@ -61,9 +61,9 @@ const (
 	// provisionedStorageLimit is the storage limit of exempt placement projects,
 	// unless configured otherwise.
 	provisionedStorageLimit = int64(memory.PB)
-	// provisionedBandwidthLimit is the bandwidth limit of exempt placement
-	// projects, unless configured otherwise.
-	provisionedBandwidthLimit = int64(memory.PB)
+	// downloadLimit is the bandwidth (download) limit of every project managed
+	// by the chore, unless an exemption configures otherwise.
+	downloadLimit = int64(50 * memory.TB)
 	// enabledSegmentLimit is the segment limit of enabled projects. Setting it
 	// also lifts the zero segment limit of a previously locked down project.
 	enabledSegmentLimit = 1_000_000_000
@@ -344,6 +344,7 @@ func (chore *Chore) reconcileOwnPlacement(ctx context.Context, log *zap.Logger, 
 	}
 	return chore.updateLimits(ctx, project, exempt[placement].apply(projectLimits{
 		storage:      int64Ptr(int64(float64(capacity) * capacityRatio)),
+		bandwidth:    int64Ptr(downloadLimit),
 		segment:      int64Ptr(enabledSegmentLimit),
 		rateLimitPut: int64Ptr(ownPlacementRateLimitPut),
 		rateLimitGet: int64Ptr(ownPlacementRateLimitGet),
@@ -355,6 +356,7 @@ func lockedDown() projectLimits {
 	return projectLimits{
 		rateLimitPut: int64Ptr(0),
 		rateLimitGet: int64Ptr(0),
+		bandwidth:    int64Ptr(downloadLimit),
 		segment:      int64Ptr(0),
 	}
 }

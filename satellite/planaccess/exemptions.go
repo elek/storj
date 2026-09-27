@@ -115,7 +115,7 @@ func newExemptions(log *zap.Logger, entries []Exemption) exemptions {
 func (limits Limits) provisioned() projectLimits {
 	return limits.apply(projectLimits{
 		storage:      int64Ptr(provisionedStorageLimit),
-		bandwidth:    int64Ptr(provisionedBandwidthLimit),
+		bandwidth:    int64Ptr(downloadLimit),
 		segment:      int64Ptr(enabledSegmentLimit),
 		rateLimitPut: int64Ptr(provisionedRateLimit),
 		rateLimitGet: int64Ptr(provisionedRateLimit),

@@ -100,6 +100,7 @@ func TestChore(t *testing.T) {
 					requireInt64(t, 0, project.SegmentLimit)
 					requireInt(t, 0, project.RateLimitPut)
 					requireInt(t, 0, project.RateLimitGet)
+					requireDownloadLimit(t, project)
 				case ownPlacement:
 					require.Equal(t, "Stored on own storagenodes", project.Description)
 					requireInt64(t, 1_000_000_000, project.SegmentLimit)
@@ -108,6 +109,7 @@ func TestChore(t *testing.T) {
 					require.Equal(t, int64(float64(7*memory.GB)*0.95), project.StorageLimit.Int64())
 					requireInt(t, 10000, project.RateLimitPut)
 					requireInt(t, 10000, project.RateLimitGet)
+					requireDownloadLimit(t, project)
 
 					members, err := db.Console().ProjectMembers().GetByMemberID(ctx, withPlacement.ID)
 					require.NoError(t, err)
@@ -178,6 +180,7 @@ func TestChore(t *testing.T) {
 			requireInt64(t, 1_000_000_000, project.SegmentLimit)
 			requireInt(t, 10000, project.RateLimitPut)
 			requireInt(t, 10000, project.RateLimitGet)
+			requireDownloadLimit(t, project)
 		}
 	})
 }
@@ -212,6 +215,7 @@ func TestChoreExemptions(t *testing.T) {
     placement: %d
     limits:
       storage: 10TB
+      bandwidth: 1TB
       rate-limit-put: 5
   - user: %s
     placement: %d
@@ -249,21 +253,21 @@ func TestChoreExemptions(t *testing.T) {
 		type expectedProject struct {
 			description  string
 			storage      int64
-			bandwidth    *int64
+			bandwidth    int64
 			segment      int64
 			rateLimitPut int
 		}
-		pb := int64(memory.PB)
+		pb, download := int64(memory.PB), int64(50*memory.TB)
 		expected := map[uuid.UUID]map[storj.PlacementConstraint]expectedProject{
 			// the undefined placement is skipped.
 			withoutNodes.ID: {
-				storj.DefaultPlacement: {description: "Provisioned to placement global", storage: pb, bandwidth: &pb, segment: 42, rateLimitPut: 10000},
-				ownPlacement:           {description: "Provisioned to placement first", storage: pb, bandwidth: &pb, rateLimitPut: 10000},
-				ownPlacement + 1:       {description: "Provisioned to placement second", storage: memory.TB.Int64() * 10, bandwidth: &pb, rateLimitPut: 5},
+				storj.DefaultPlacement: {description: "Provisioned to placement global", storage: pb, bandwidth: download, segment: 42, rateLimitPut: 10000},
+				ownPlacement:           {description: "Provisioned to placement first", storage: pb, bandwidth: download, rateLimitPut: 10000},
+				ownPlacement + 1:       {description: "Provisioned to placement second", storage: memory.TB.Int64() * 10, bandwidth: memory.TB.Int64(), rateLimitPut: 5},
 			},
 			fewNodes.ID: {
-				ownPlacement:     {description: "Provisioned to placement first", storage: pb, bandwidth: &pb, rateLimitPut: 10000},
-				ownPlacement + 2: {description: "Stored on own storagenodes", storage: int64(float64(3*memory.GB) * 0.95), rateLimitPut: 10000},
+				ownPlacement:     {description: "Provisioned to placement first", storage: pb, bandwidth: download, rateLimitPut: 10000},
+				ownPlacement + 2: {description: "Stored on own storagenodes", storage: int64(float64(3*memory.GB) * 0.95), bandwidth: download, rateLimitPut: 10000},
 			},
 		}
 
@@ -291,10 +295,8 @@ func TestChoreExemptions(t *testing.T) {
 					require.Equal(t, want.description, project.Description)
 					require.NotNil(t, project.StorageLimit)
 					require.Equal(t, want.storage, project.StorageLimit.Int64())
-					if want.bandwidth != nil {
-						require.NotNil(t, project.BandwidthLimit)
-						require.Equal(t, *want.bandwidth, project.BandwidthLimit.Int64())
-					}
+					require.NotNil(t, project.BandwidthLimit)
+					require.Equal(t, want.bandwidth, project.BandwidthLimit.Int64())
 					if want.segment == 0 {
 						want.segment = 1_000_000_000
 					}
@@ -418,6 +420,13 @@ func requireLockedDown(t *testing.T, project console.Project) {
 	requireInt64(t, 0, project.SegmentLimit)
 	requireInt(t, 0, project.RateLimitPut)
 	requireInt(t, 0, project.RateLimitGet)
+	requireDownloadLimit(t, project)
+}
+
+func requireDownloadLimit(t *testing.T, project console.Project) {
+	t.Helper()
+	require.NotNil(t, project.BandwidthLimit)
+	require.Equal(t, 50*memory.TB, *project.BandwidthLimit)
 }
 
 func requireInt64(t *testing.T, expected int64, actual *int64) {
